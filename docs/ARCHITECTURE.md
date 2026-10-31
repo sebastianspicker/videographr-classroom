@@ -138,7 +138,13 @@ For a recording, `AppStore` freezes the applicable authorization, transaction,
 asset, destination, and provenance before AVFoundation starts. Finalized media is
 inspected and attached only to the matching transaction and session. Stale or
 already-terminal transitions are no-ops. Startup reconciliation keeps explicit
-incomplete or unknown outcomes instead of silently reporting success. Committed
+incomplete or unknown outcomes instead of silently reporting success. No capture is in
+flight at startup, so a staged take of an unresolved transaction is treated as
+interrupted and stays in place as `completionUnknown`. Reflect offers to attach it,
+after a consent recheck and media inspection, through the ordinary finalization
+path, or to discard it. A failed attachment returns the media to staging. Staging
+whose session is gone, or whose take is finalized or failed, is removed; staging
+with unreadable session metadata is left in place and reported. Committed
 imported assets are recognized from their owning session metadata, so recording
 reconciliation does not mistake them for session-named capture files.
 
@@ -263,7 +269,7 @@ enter annotations, readiness, persistence or study exports. See
 - Keep Apple-framework objects and queues at the `Capture` boundary, and keep
   views free of persistence callbacks.
 - Keep `AppStore` the only writer of the active session, and put pure decision
-  logic in a package target where SwiftPM tests can reach it.
+  logic in a package target where hardware-free package tests can reach it.
 - Treat persisted strings (enum raw values, blocker ids, measurement keys,
   algorithm versions, file and directory names) as formats. Persisted consent-scope
   sets encode in canonical order so identical sessions produce identical bytes.
@@ -272,7 +278,9 @@ enter annotations, readiness, persistence or study exports. See
 
 ## Build and deployment boundaries
 
-SwiftPM builds and tests the four libraries independently of the Xcode app. The
+SwiftPM builds the four libraries independently of the Xcode app. Their unit and
+persisted-format contract suites are maintained outside this public repository,
+so the public automated tests are the app-unit target described below. The
 Xcode target links those local package products and owns all Apple-framework
 integration. The shared scheme contains one host-bound app-unit target and no UI
 test target.

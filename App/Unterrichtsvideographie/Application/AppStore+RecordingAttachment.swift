@@ -11,24 +11,11 @@ extension AppStore {
     ) async -> Bool {
         guard persistenceIsReady else { return false }
         do {
-            let context = try await recordingFinalizationContext(
+            try await attachFinalizedMedia(
                 for: transaction,
-                finalizedURL: finalizedURL
-            )
-            let persisted = try await finalizeRecording(
-                context,
+                finalizedURL: finalizedURL,
                 runtimeStatus: runtimeStatus
             )
-            if session.id == persisted.id {
-                applyPersistedSession(persisted)
-                cacheMediaURL(
-                    context.canonicalURL,
-                    for: context.manifest.mediaAssetID,
-                    in: persisted
-                )
-            }
-            invalidateCachedPackages(for: persisted.id)
-            await reloadListAsync()
             return true
         } catch {
             let message = error.localizedDescription
@@ -36,6 +23,33 @@ extension AppStore {
             lastStoreError = message
             return false
         }
+    }
+
+    /// Inspects and attaches canonical media to its transaction. Throws without failing the take,
+    /// so interrupted-take recovery can keep the media for another operator decision.
+    func attachFinalizedMedia(
+        for transaction: RecordingTransaction,
+        finalizedURL: URL,
+        runtimeStatus: CaptureRuntimeStatus
+    ) async throws {
+        let context = try await recordingFinalizationContext(
+            for: transaction,
+            finalizedURL: finalizedURL
+        )
+        let persisted = try await finalizeRecording(
+            context,
+            runtimeStatus: runtimeStatus
+        )
+        if session.id == persisted.id {
+            applyPersistedSession(persisted)
+            cacheMediaURL(
+                context.canonicalURL,
+                for: context.manifest.mediaAssetID,
+                in: persisted
+            )
+        }
+        invalidateCachedPackages(for: persisted.id)
+        await reloadListAsync()
     }
 
     private struct RecordingFinalizationContext {

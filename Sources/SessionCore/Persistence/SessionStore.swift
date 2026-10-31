@@ -101,6 +101,8 @@ public struct RecordingArtifactReconciliationReport: Equatable, Sendable {
         public var removedStagingFileNames: [String]
         public var restoredQuarantineFileNames: [String] = []
         public var removedQuarantineFileNames: [String] = []
+        /// Staged takes interrupted by termination, kept for an explicit operator decision.
+        public var preservedInterruptedTakeFileNames: [String] = []
         public var relinkedSessionIDs: [UUID]
         public var alreadyLinkedSessionIDs: [UUID]
         public var diagnostics: [RecordingArtifactDiagnostic]
@@ -121,6 +123,7 @@ public struct RecordingArtifactReconciliationReport: Equatable, Sendable {
     public let removedStagingFileNames: [String]
     public let restoredQuarantineFileNames: [String]
     public let removedQuarantineFileNames: [String]
+    public let preservedInterruptedTakeFileNames: [String]
     public let relinkedSessionIDs: [UUID]
     public let alreadyLinkedSessionIDs: [UUID]
     public let diagnostics: [RecordingArtifactDiagnostic]
@@ -129,6 +132,7 @@ public struct RecordingArtifactReconciliationReport: Equatable, Sendable {
         removedStagingFileNames = values.removedStagingFileNames
         restoredQuarantineFileNames = values.restoredQuarantineFileNames
         removedQuarantineFileNames = values.removedQuarantineFileNames
+        preservedInterruptedTakeFileNames = values.preservedInterruptedTakeFileNames
         relinkedSessionIDs = values.relinkedSessionIDs
         alreadyLinkedSessionIDs = values.alreadyLinkedSessionIDs
         diagnostics = values.diagnostics

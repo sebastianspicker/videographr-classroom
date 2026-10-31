@@ -58,14 +58,19 @@ extension CaptureSession {
     /// Closes prepared, recording, or completion-unknown manifests that have no surviving canonical media after startup
     /// artifact reconciliation. Capture decisions are intentionally retained for auditability.
     @discardableResult
+    /// `preservedTakeIDs` are takes whose interrupted staged media was kept for an operator
+    /// decision; they stay `completionUnknown` instead of failing.
     public mutating func failAbandonedTakes(
         canonicalMediaAssetIDs: Set<UUID>,
+        preservedTakeIDs: Set<UUID> = [],
         at date: Date = Date(),
         reason: String = "App-Neustart: vorbereiteter Take besitzt keine finalisierte Mediendatei."
     ) -> Int {
         var failedAssetIDs = Set<UUID>()
         for index in takeManifests.indices {
-            guard shouldFail(takeManifests[index], absentFrom: canonicalMediaAssetIDs) else { continue }
+            guard !preservedTakeIDs.contains(takeManifests[index].id),
+                  shouldFail(takeManifests[index], absentFrom: canonicalMediaAssetIDs)
+            else { continue }
             failTake(at: index, reason: reason, date: date, failedAssetIDs: &failedAssetIDs)
         }
         guard !failedAssetIDs.isEmpty else { return 0 }

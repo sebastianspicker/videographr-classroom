@@ -27,6 +27,8 @@ final class SpokenAudioCheckModel: NSObject, ObservableObject {
     var preparationTask: Task<Void, Never>?
     var authorizationExpiryTask: Task<Void, Never>?
     var resumeCapture: (() -> Void)?
+    /// Capture paused by a check that inactivity cut short; restarted by `resumeAfterInactivity()`.
+    var captureResumeAfterInactivity: (() -> Void)?
     var playbackCompletion: (() -> Void)?
     var authorization: SpokenAudioCheckAuthorization?
     var currentSession: (() -> CaptureSession)?
@@ -74,7 +76,23 @@ final class SpokenAudioCheckModel: NSObject, ObservableObject {
         }
     }
 
+    /// Ends the check because the app left the foreground. Capture must not restart while
+    /// inactive, so a capture this check paused is kept for `resumeAfterInactivity()`.
+    func cancelForInactivity() {
+        let pausedCapture = blocksCapture ? resumeCapture : captureResumeAfterInactivity
+        cancel(resumeCapture: false)
+        captureResumeAfterInactivity = pausedCapture
+    }
+
+    /// Restarts, at most once, the capture that an inactivity-cancelled check had paused.
+    func resumeAfterInactivity() {
+        let resume = captureResumeAfterInactivity
+        captureResumeAfterInactivity = nil
+        resume?()
+    }
+
     func cancel(resumeCapture shouldResume: Bool) {
+        captureResumeAfterInactivity = nil
         let mayResume = shouldResume && authorizationIsCurrent()
         preparationTask?.cancel()
         preparationTask = nil

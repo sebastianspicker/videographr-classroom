@@ -6,17 +6,6 @@ import SessionCore
 import QuartzCore
 import UIKit
 
-/// AVFoundation's in-flight duration guardrail; sizes and route normalization live in `CaptureCapacity`.
-/// The duration is bounded by `CaptureSession` (1...240 minutes) before it reaches this layer.
-internal enum CaptureGuardrails {
-    static func duration(for plannedDurationMinutes: Int) -> CMTime {
-        CMTime(
-            seconds: Double(CaptureCapacity.boundedDurationMinutes(plannedDurationMinutes) * 60),
-            preferredTimescale: 1_000
-        )
-    }
-}
-
 /// Publishes transient capture state and guidance; `CaptureSessionController` owns AVFoundation objects.
 ///
 /// Production path: sample buffers → `FrameSampler` (luminance + Vision) + `MotionService` →

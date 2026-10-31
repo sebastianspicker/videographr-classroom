@@ -148,8 +148,8 @@ paths; `--keep-artifacts` retains only synthetic diagnostic media/build artifact
 at the printed temporary path. Offscreen GPU packing is a test adapter, not an
 execution of the UIKit wrapper.
 
-Package tests cover geometry, surface-aligned footprints and texture mapping,
-occlusion edges, invalid inputs, camera bounds and authorization, plus the
+Package tests, maintained outside this public repository, cover geometry,
+surface-aligned footprints and texture mapping, occlusion edges, invalid inputs, camera bounds and authorization, plus the
 footprint-stretch measure, `GaussianEvidence` and the occlusion-edge flag. The
 offscreen render check compares GPU pixels with the CPU reference projection
 along both projected axes, including the bilinear source-texture lookup. It also

@@ -34,12 +34,25 @@ swift build --disable-sandbox -c release \
 echo "==> App unit tests"
 SIMULATOR_ID="$(PYTHONDONTWRITEBYTECODE=1 python3 scripts/select_simulator.py)"
 echo "Using iPhone simulator ${SIMULATOR_ID}"
-xcodebuild -quiet \
+RESULT_BUNDLE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/videographr-app-tests.XXXXXX")"
+RESULT_BUNDLE="${RESULT_BUNDLE_DIR}/AppUnitTests.xcresult"
+# Keep XCTest case output visible so intermittent CI failures identify the failing test.
+app_test_status=0
+xcodebuild \
   -project App/Unterrichtsvideographie.xcodeproj \
   -scheme Unterrichtsvideographie \
   -destination "platform=iOS Simulator,id=${SIMULATOR_ID}" \
+  -resultBundlePath "${RESULT_BUNDLE}" \
   CODE_SIGNING_ALLOWED=NO \
-  test
+  test || app_test_status=$?
+if [ "${app_test_status}" -ne 0 ]; then
+  # Log-only evidence; a CI artifact upload of RESULT_BUNDLE can replace this later.
+  echo "App unit tests failed (exit ${app_test_status}). Result bundle: ${RESULT_BUNDLE}" >&2
+  xcrun xcresulttool get test-results summary --path "${RESULT_BUNDLE}" >&2 \
+    || echo "No test-result summary could be read from the result bundle." >&2
+  exit "${app_test_status}"
+fi
+rm -rf -- "${RESULT_BUNDLE_DIR}"
 
 echo "==> Xcode Release analysis"
 xcodebuild -quiet \

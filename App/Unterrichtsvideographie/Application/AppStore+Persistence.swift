@@ -199,6 +199,10 @@ extension AppStore {
     ) -> [String] {
         [
             (report.removedStagingFileNames.count, "Unterbrochene Aufnahme bereinigt"),
+            (
+                report.preservedInterruptedTakeFileNames.count,
+                "Unterbrochene Aufnahme aufbewahrt, in Reflektieren prüfen oder verwerfen"
+            ),
             (report.relinkedSessionIDs.count, "Abgeschlossene Aufnahme wieder zugeordnet"),
             (report.restoredQuarantineFileNames.count, "Unterbrochene Medienbereinigung zurückgerollt"),
             (report.removedQuarantineFileNames.count, "Abgeschlossene Medienbereinigung abgeschlossen")

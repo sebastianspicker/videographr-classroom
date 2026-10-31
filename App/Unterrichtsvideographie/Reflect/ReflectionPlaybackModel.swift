@@ -155,6 +155,85 @@ enum ReflectionAnnotationTimecode {
     }
 }
 
+/// Admission rules for every path that writes a human annotation (editor and quick links):
+/// current local-reflection authority, known media duration, author, note, and a bounded interval.
+enum ReflectionAnnotationAdmission {
+    enum Rejection: Error, Equatable {
+        case localReflectionNotAuthorized
+        case durationPending
+        case missingAuthor
+        case missingNote
+        case invalidInterval(focus: ReflectionAnnotationField, outOfRange: Bool)
+        case startAfterEnd
+        case outsideKnownDuration
+
+        var messageDE: String {
+            switch self {
+            case .localReflectionNotAuthorized:
+                "Für diese Notiz fehlt eine aktuelle Freigabe für lokale Reflexion."
+            case .durationPending:
+                "Die Videodauer wird noch geprüft. Bitte warten Sie, bevor Sie einen Zeitbereich sichern."
+            case .missingAuthor:
+                "Bitte ein Autor-Pseudonym eingeben."
+            case .missingNote:
+                "Bitte eine menschlich verfasste Beobachtungsnotiz eingeben."
+            case .invalidInterval(_, let outOfRange):
+                outOfRange ? "Zeitbereich ist zu groß." : "Zeitangaben bitte als MM:SS eingeben."
+            case .startAfterEnd:
+                "Der Beginn des Zeitbereichs darf nicht nach dem Ende liegen."
+            case .outsideKnownDuration:
+                "Der Zeitbereich liegt außerhalb der bekannten Videodauer."
+            }
+        }
+
+        var focus: ReflectionAnnotationField? {
+            switch self {
+            case .localReflectionNotAuthorized, .durationPending: nil
+            case .missingAuthor: .author
+            case .missingNote: .note
+            case .invalidInterval(let focus, _): focus
+            case .startAfterEnd, .outsideKnownDuration: .end
+            }
+        }
+    }
+
+    struct Request {
+        var prompt: ReflectionPromptID
+        var mediaAssetID: UUID
+        var authorizesLocalReflection: Bool
+        var durationMilliseconds: Int64?
+        var author: String
+        var note: String
+        var start: Result<Int64, ReflectionAnnotationTimecode.ParseError>
+        var end: Result<Int64, ReflectionAnnotationTimecode.ParseError>
+    }
+
+    static func admit(_ request: Request) -> Result<EvidenceAnnotation.Values, Rejection> {
+        guard request.authorizesLocalReflection else { return .failure(.localReflectionNotAuthorized) }
+        guard let duration = request.durationMilliseconds else { return .failure(.durationPending) }
+        let author = request.author.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !author.isEmpty else { return .failure(.missingAuthor) }
+        let note = request.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !note.isEmpty else { return .failure(.missingNote) }
+        guard case let .success(start) = request.start, case let .success(end) = request.end else {
+            let outOfRange = [request.start, request.end].contains { $0 == .failure(.outOfRange) }
+            let focus: ReflectionAnnotationField = if case .failure = request.start { .start } else { .end }
+            return .failure(.invalidInterval(focus: focus, outOfRange: outOfRange))
+        }
+        guard start <= end else { return .failure(.startAfterEnd) }
+        guard end <= duration else { return .failure(.outsideKnownDuration) }
+
+        var values = EvidenceAnnotation.Values()
+        values.promptIdentifier = request.prompt.rawValue
+        values.mediaAssetID = request.mediaAssetID
+        values.startMilliseconds = start
+        values.endMilliseconds = end
+        values.note = note
+        values.authorPseudonym = author
+        return .success(values)
+    }
+}
+
 struct ReflectionTimecode: View {
     let playback: ReflectionPlaybackModel
 

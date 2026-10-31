@@ -32,7 +32,7 @@ compliance, pedagogical validity, or educational effectiveness.
 
 | Check | Evidence |
 |---|---|
-| Strict Swift tests | Deterministic domain contracts |
+| Strict Swift package tests (maintained outside this repository) | Deterministic domain contracts |
 | Generic Simulator build | Compile integration |
 | Physical iPhone or iPad run | Device-specific capture, permissions, protection, interruptions, and endurance |
 | Staged adult pilot | Technical thresholds and failure rates under declared conditions |

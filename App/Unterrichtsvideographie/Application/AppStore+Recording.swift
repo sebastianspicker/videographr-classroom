@@ -8,6 +8,10 @@ extension AppStore {
     func prepareSessionForRecording(_ preparation: RecordingPreparation) async -> PreparedRecording? {
         guard persistenceIsReady else { return nil }
         guard await flushPendingChanges() else { return nil }
+        if await !pendingInterruptedTakeIDs().isEmpty {
+            lastStoreError = "Eine unterbrochene Aufnahme wartet in Reflektieren auf Prüfung oder Verwerfen."
+            return nil
+        }
         let preparedAt = Date()
         let admission: RecordingAdmission.Admission
         switch RecordingAdmission.evaluate(
@@ -35,6 +39,7 @@ extension AppStore {
                 decision: decision,
                 preparedAt: preparedAt
             )
+            recordingTransactionsOfThisLaunch.insert(preparation.transactionID)
             let persisted = try await persistPreparedRecording(artifacts)
             applyPersistedSession(persisted)
             invalidateCachedPackages(for: persisted.id)

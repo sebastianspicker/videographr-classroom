@@ -9,6 +9,7 @@ extension ReflectView {
 
     var playerColumn: some View {
         VStack(alignment: .leading, spacing: Space.l) {
+            interruptedTakeNotice
             mediaEvidenceStudio
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -475,6 +476,7 @@ extension ReflectView {
                         .buttonStyle(InkButtonStyle(kind: .secondary))
                 }
             }
+            .disabled(isSavingAnnotation)
         }
     }
 
@@ -546,5 +548,77 @@ extension ReflectView {
             .padding(.top, Space.xs)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Interrupted takes
+
+extension ReflectView {
+    /// A take cut off by app termination is kept until the operator verifies or discards it.
+    @ViewBuilder
+    var interruptedTakeNotice: some View {
+        if !interruptedTakeIDs.isEmpty || interruptedTakeMessage != nil {
+            VStack(alignment: .leading, spacing: Space.s) {
+                if !interruptedTakeIDs.isEmpty {
+                    StatusMark("Unterbrochene Aufnahme aufbewahrt, noch nicht geprüft", kind: .attention)
+                    Text("Die App wurde während einer Aufnahme beendet. Die Datei wurde nicht gelöscht. Prüfen und übernehmen Sie sie als Take, oder verwerfen Sie sie ausdrücklich. Bis dahin ist in dieser Sitzung keine neue Aufnahme möglich.")
+                        .font(Typeface.caption)
+                        .foregroundStyle(Ink.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    ForEach(interruptedTakeIDs, id: \.self) { transactionID in
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: Space.m) { interruptedTakeActions(for: transactionID) }
+                            VStack(alignment: .leading, spacing: Space.s) { interruptedTakeActions(for: transactionID) }
+                        }
+                        .disabled(isResolvingInterruptedTake)
+                    }
+                }
+                if let interruptedTakeMessage {
+                    Text(interruptedTakeMessage)
+                        .font(Typeface.caption)
+                        .foregroundStyle(Ink.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("reflect.interruptedTake.message")
+                }
+            }
+            .confirmationDialog(
+                "Unterbrochene Aufnahme endgültig verwerfen?",
+                isPresented: Binding(
+                    get: { interruptedTakePendingDiscard != nil },
+                    set: { if !$0 { interruptedTakePendingDiscard = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Endgültig verwerfen", role: .destructive) {
+                    if let transactionID = interruptedTakePendingDiscard {
+                        resolveInterruptedTake(transactionID, discard: true)
+                    }
+                }
+            } message: {
+                Text("Die Datei wird gelöscht. Das lässt sich nicht rückgängig machen.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func interruptedTakeActions(for transactionID: UUID) -> some View {
+        Button("Prüfen und übernehmen") { resolveInterruptedTake(transactionID, discard: false) }
+            .buttonStyle(InkButtonStyle(kind: .primary))
+            .accessibilityIdentifier("reflect.interruptedTake.recover")
+        Button("Verwerfen…", role: .destructive) { interruptedTakePendingDiscard = transactionID }
+            .buttonStyle(InkButtonStyle(kind: .destructive))
+            .accessibilityIdentifier("reflect.interruptedTake.discard")
+    }
+
+    private func resolveInterruptedTake(_ transactionID: UUID, discard: Bool) {
+        isResolvingInterruptedTake = true
+        interruptedTakeMessage = nil
+        Task { @MainActor in
+            interruptedTakeMessage = discard
+                ? await appStore.discardInterruptedTake(transactionID)
+                : await appStore.recoverInterruptedTake(transactionID)
+            interruptedTakeIDs = await appStore.pendingInterruptedTakeIDs()
+            isResolvingInterruptedTake = false
+        }
     }
 }

@@ -86,6 +86,8 @@ final class AppStore: ObservableObject {
     var persistenceWillStoreHook: (@MainActor @Sendable (Int) async throws -> Void)?
     var persistenceDidStoreHook: (@MainActor @Sendable (Int) async -> Void)?
     var mediaResolutionSignature: [UUID: String] = [:]
+    /// Takes prepared in this process; only takes from an earlier process count as interrupted.
+    var recordingTransactionsOfThisLaunch: Set<UUID> = []
 
     init(store: SessionStore? = nil, bootstrapMode: BootstrapMode = .automatic) {
         let store = store ?? Self.defaultStore()

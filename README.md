@@ -50,6 +50,9 @@ not determine recording readiness, consent, export authority, or reflection cont
   still require physical-device validation.
 - The app supports one local operator. It has no accounts, roles, remote
   administration, synchronization, portal upload, or multi-camera workflow.
+- If the app is terminated during a take, the partial file is kept unverified. In
+  Reflect the operator can check and attach it, or discard it. Whether such files
+  are playable has not been validated on devices.
 - The app does not edit recorded media.
 - Study-package export does not include the recorded or imported MP4. The app
   currently has no separate video-export operation.
@@ -74,12 +77,17 @@ Obtain a source checkout, change to its root directory, and open the Xcode
 project:
 
 ```bash
-cd videographr
+cd videographr-classroom
 open App/Unterrichtsvideographie.xcodeproj
 ```
 
 Select the `Unterrichtsvideographie` scheme and an iOS 17 or newer Simulator,
 then build and run. The installed app name is Videographr.
+
+The app opens behind device-owner authentication. A new Simulator has no
+passcode, so before launching choose Features > Face ID > Enrolled in the
+Simulator menu (Touch ID on device types without Face ID). When the prompt
+appears, choose Features > Face ID > Matching Face.
 
 For a physical device, configure a development team and signing identity in Xcode.
 Physical-device operation is outside the validated Simulator path documented here.
@@ -165,8 +173,12 @@ The gate runs:
 - Bash syntax checks and ShellCheck when installed
 - property-list and Xcode project syntax checks
 - a release Swift package build
+- hardware-free Xcode app-unit tests on an iPhone Simulator
 - Xcode Release analysis for a generic iOS Simulator
 - an app build for a generic iOS Simulator
+
+[RELEASING.md](RELEASING.md) describes every gate step. Package-level unit suites
+are maintained outside this public repository.
 
 ## Deployment and operation
 
@@ -182,6 +194,9 @@ The application does not upload them.
 
 - If SwiftPM reports a sandbox denial, use the documented
   `--disable-sandbox` commands.
+- If launch shows "Zugriff blockiert", the device has neither a passcode nor
+  biometric enrollment. In Simulator, choose Features > Face ID > Enrolled, then
+  tap "Geräteeigentümer authentifizieren".
 - Simulator warnings about camera, microphone, or motion hardware are expected.
   Simulator recording is intentionally rejected.
 - Physical-device signing errors require a local Apple Developer team and signing

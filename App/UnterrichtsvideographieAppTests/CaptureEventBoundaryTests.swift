@@ -1,3 +1,4 @@
+import AVFoundation
 import XCTest
 import ExperimentalResearch
 import GuidanceEngine
@@ -19,6 +20,18 @@ final class CaptureEventBoundaryTests: XCTestCase {
             try? FileManager.default.removeItem(at: temporaryDirectory)
         }
         temporaryDirectory = nil
+    }
+
+    /// The planned duration is a planning value; only the free-capacity reserve may stop a take.
+    func testRemoveRecordingLimitsClearsAnyDurationOrFileSizeCap() {
+        let output = AVCaptureMovieFileOutput()
+        output.maxRecordedDuration = CMTime(seconds: 45 * 60, preferredTimescale: 1_000)
+        output.maxRecordedFileSize = 45 * 60 * 1_500_000
+
+        CaptureSessionController.removeRecordingLimits(from: output)
+
+        XCTAssertFalse(output.maxRecordedDuration.isValid)
+        XCTAssertEqual(output.maxRecordedFileSize, 0)
     }
 
     @MainActor
@@ -342,5 +355,111 @@ final class CaptureEventBoundaryTests: XCTestCase {
             transactionID: UUID(),
             artifacts: store.appStore.recordingArtifacts
         )
+    }
+}
+
+/// A spoken-audio check pauses Live capture. If the app leaves the foreground mid-check,
+/// capture must stay off while inactive and restart once the app is active again.
+@MainActor
+final class SpokenAudioCheckInactivityTests: XCTestCase {
+    func testInactivityDuringACheckDefersTheCaptureResumeUntilActive() {
+        let model = SpokenAudioCheckModel()
+        var resumeCount = 0
+        model.resumeCapture = { resumeCount += 1 }
+        model.phase = .recording
+
+        model.cancelForInactivity()
+        XCTAssertEqual(model.phase, .idle)
+        XCTAssertEqual(resumeCount, 0)
+
+        // inactive → background → inactive must not lose the pending resume.
+        model.cancelForInactivity()
+        XCTAssertEqual(resumeCount, 0)
+
+        model.resumeAfterInactivity()
+        XCTAssertEqual(resumeCount, 1)
+        model.resumeAfterInactivity()
+        XCTAssertEqual(resumeCount, 1)
+    }
+
+    func testInactivityWithoutARunningCheckDoesNotStartCapture() {
+        let model = SpokenAudioCheckModel()
+        var resumeCount = 0
+        model.resumeCapture = { resumeCount += 1 }
+        model.phase = .completed
+
+        model.cancelForInactivity()
+        model.resumeAfterInactivity()
+        XCTAssertEqual(resumeCount, 0)
+    }
+
+    func testAnExplicitCancelDropsADeferredResume() {
+        let model = SpokenAudioCheckModel()
+        var resumeCount = 0
+        model.resumeCapture = { resumeCount += 1 }
+        model.phase = .playing
+
+        model.cancelForInactivity()
+        model.cancel(resumeCapture: false) // leaving Live or switching sessions
+        model.resumeAfterInactivity()
+        XCTAssertEqual(resumeCount, 0)
+    }
+}
+
+/// A take cut off by app termination stays preserved until the operator decides.
+@MainActor
+final class InterruptedTakeRecoveryAppTests: XCTestCase {
+    func testInterruptedTakeIsOfferedNeverDeletedImplicitlyAndDiscardedOnlyOnRequest() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("InterruptedTake-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let store = SessionStore(rootDirectory: root)
+        var session = CaptureSession()
+        let transactionID = UUID()
+        var assetValues = SessionMediaAsset.Values()
+        assetValues.role = .ownRecorded
+        assetValues.relativePath = "\(session.id.uuidString).mp4"
+        let asset = SessionMediaAsset(assetValues)
+        var manifestValues = CaptureTakeManifest.Values()
+        manifestValues.id = transactionID
+        manifestValues.sessionID = session.id
+        manifestValues.mediaAssetID = asset.id
+        manifestValues.lifecycleState = .prepared
+        XCTAssertTrue(RecordingStateMachine.prepare(PreparedRecordingMutation(
+            transactionID: transactionID,
+            asset: asset,
+            decision: CaptureDecision(),
+            manifest: CaptureTakeManifest(manifestValues),
+            provenance: BuildProvenanceFactory.capture(for: .evidenceSafe),
+            preparedAt: Date()
+        ), in: &session))
+        XCTAssertTrue(RecordingStateMachine.began(transactionID: transactionID, in: &session, at: Date()))
+        try store.save(session)
+        let staged = try store.prepareStagedRecordingURL(for: session.id, transactionID: transactionID)
+        try Data("synthetic partial take".utf8).write(to: staged)
+
+        let appStore = AppStore(store: store, bootstrapMode: .deferred)
+        await appStore.bootstrap()
+        XCTAssertEqual(appStore.bootstrapState, .ready)
+        let pending = await appStore.pendingInterruptedTakeIDs()
+        XCTAssertEqual(pending, [transactionID])
+        XCTAssertEqual(appStore.session.takeManifests.first?.effectiveLifecycleState, .completionUnknown)
+
+        // This synthetic take carries no frozen authorization, so recovery refuses and keeps the media.
+        _ = await appStore.recoverInterruptedTake(transactionID)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: staged.path))
+        XCTAssertEqual(appStore.session.takeManifests.first?.effectiveLifecycleState, .completionUnknown)
+
+        // Still pending after the refused recovery; Live refuses a new take on this condition.
+        let stillPending = await appStore.pendingInterruptedTakeIDs()
+        XCTAssertEqual(stillPending, [transactionID])
+
+        let outcome = await appStore.discardInterruptedTake(transactionID)
+        XCTAssertEqual(outcome, "Unterbrochene Aufnahme verworfen.")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: staged.path))
+        XCTAssertEqual(appStore.session.takeManifests.first?.effectiveLifecycleState, .failed)
+        let remaining = await appStore.pendingInterruptedTakeIDs()
+        XCTAssertTrue(remaining.isEmpty)
     }
 }

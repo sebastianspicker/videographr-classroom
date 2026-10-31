@@ -341,7 +341,7 @@ extension LiveGuidanceView {
                 instrumentRow("Temperatur", liveStore.runtimeStatus.thermalState)
                 instrumentRow("Freier Speicher", liveStore.runtimeStatus.availableCapacityBytes.map(formatCapacity) ?? "nicht verfügbar")
             }
-            Text("Dauer und Dateigröße werden auf die geplante Aufnahme begrenzt; während der Aufnahme wird die Sicherheitsreserve überwacht.")
+            Text("Die geplante Dauer beendet die Aufnahme nicht. Automatisch finalisiert wird sie, wenn der freie Speicher unter die Sicherheitsreserve fällt, die Freigabe abläuft oder widerrufen wird, die Aufnahme unterbrochen wird oder die Hintergrundzeit endet.")
                 .font(Typeface.captionSmall)
                 .foregroundStyle(Room.tertiary)
                 .fixedSize(horizontal: false, vertical: true)

@@ -39,6 +39,10 @@ The app:
 - attaches finalized media only after media inspection succeeds
 - assigns recording, import, deletion, and export work to specific transactions
 - retains explicit incomplete or unknown states after interrupted operations
+- keeps the media of a take interrupted by app termination, unverified, until the
+  operator attaches it after a consent recheck and media inspection, or discards it;
+  deleting the session also deletes that media, at the latest during the next
+  launch's reconciliation if the immediate removal fails
 - limits external imports to 20 GiB and copies from one opened regular-file
   descriptor
 - stores observation and experimental histories in bounded journals

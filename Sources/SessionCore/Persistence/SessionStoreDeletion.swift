@@ -39,6 +39,7 @@ extension SessionStore {
             throw error
         }
         discardQuarantinedMedia(quarantined)
+        discardInterruptedTakes(of: context.session)
         observationIDsBySession[id] = nil
         codingSnapshotIDsBySession[id] = nil
         try validateStoreDirectories()
@@ -230,7 +231,8 @@ extension SessionStore {
 
     /// Reserves a unique capture destination whose exact name records its owning session.
     /// Callers should write only `.videographr-<session UUID>-<transaction UUID>.mp4`
-    /// files so startup reconciliation can distinguish disposable staging from user media.
+    /// files so startup reconciliation can distinguish staging from user media. Staging of an
+    /// unresolved take survives a relaunch as an interrupted take; other staging is removed.
     public func prepareStagedRecordingURL(
         for sessionID: UUID,
         transactionID: UUID = UUID()
@@ -279,6 +281,104 @@ extension SessionStore {
 
     private func removeStagedRecordingIfPresent(at url: URL) throws {
         try removeRegularRecording(at: url, nonRegularError: .recordingArtifactIsNotRegularFile)
+    }
+
+    /// The preserved staged media of an interrupted take, or nil when none exists.
+    /// Links and non-regular files are rejected, never followed.
+    public func interruptedTakeURL(sessionID: UUID, transactionID: UUID) throws -> URL? {
+        try queue.sync { try interruptedTakeURLLocked(sessionID: sessionID, transactionID: transactionID) }
+    }
+
+    private func interruptedTakeURLLocked(sessionID: UUID, transactionID: UUID) throws -> URL? {
+        try validateStoreDirectories()
+        let url = try validatedRecordingURL(
+            for: stagedRecordingFileName(sessionID: sessionID, transactionID: transactionID)
+        )
+        if try isSymbolicLink(url) { throw SessionStoreError.recordingFileIsSymbolicLink }
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        guard try fileType(at: url) == .typeRegular else {
+            throw SessionStoreError.recordingArtifactIsNotRegularFile
+        }
+        return url
+    }
+
+    /// Moves an interrupted take's staged media to the session's canonical recording name so the
+    /// ordinary finalization path can inspect and attach it. An occupied destination is refused.
+    public func promoteInterruptedTake(sessionID: UUID, transactionID: UUID) throws -> URL {
+        try queue.sync {
+            // Serialized with deletion on this queue: a deleted session never receives media.
+            try requireSessionMetadata(for: sessionID)
+            guard let stagedURL = try interruptedTakeURLLocked(sessionID: sessionID, transactionID: transactionID) else {
+                throw CocoaError(.fileNoSuchFile)
+            }
+            let canonicalURL = try canonicalRecordingURL(for: sessionID)
+            guard !FileManager.default.fileExists(atPath: canonicalURL.path) else {
+                throw CocoaError(.fileWriteFileExists)
+            }
+            try FileManager.default.moveItem(at: stagedURL, to: canonicalURL)
+            try applyAndVerifyLocalArtifactPolicy(to: canonicalURL)
+            try validateStoreDirectories()
+            return canonicalURL
+        }
+    }
+
+    /// Reverses `promoteInterruptedTake` when attaching failed, so the media stays an
+    /// interrupted take awaiting an operator decision instead of an unreferenced canonical file.
+    public func demoteInterruptedTake(sessionID: UUID, transactionID: UUID) throws {
+        try queue.sync {
+            // Only media of a still-unresolved take may become staging; a finalized take's
+            // staging would be removed as stale at the next launch.
+            try requireUnresolvedTake(sessionID: sessionID, transactionID: transactionID)
+            let canonicalURL = try canonicalRecordingURL(for: sessionID)
+            guard FileManager.default.fileExists(atPath: canonicalURL.path) else { throw CocoaError(.fileNoSuchFile) }
+            guard try fileType(at: canonicalURL) == .typeRegular else {
+                throw SessionStoreError.recordingArtifactIsNotRegularFile
+            }
+            guard try interruptedTakeURLLocked(sessionID: sessionID, transactionID: transactionID) == nil else {
+                throw CocoaError(.fileWriteFileExists)
+            }
+            let stagedURL = try validatedRecordingURL(
+                for: stagedRecordingFileName(sessionID: sessionID, transactionID: transactionID)
+            )
+            try FileManager.default.moveItem(at: canonicalURL, to: stagedURL)
+            try applyAndVerifyLocalArtifactPolicy(to: stagedURL)
+            try validateStoreDirectories()
+        }
+    }
+
+    private func canonicalRecordingURL(for sessionID: UUID) throws -> URL {
+        let url = try validatedRecordingURL(
+            for: "\(sessionID.uuidString)\(Self.movieExtension)", expectedSessionID: sessionID
+        )
+        if try isSymbolicLink(url) { throw SessionStoreError.recordingFileIsSymbolicLink }
+        return url
+    }
+
+    private func requireUnresolvedTake(sessionID: UUID, transactionID: UUID) throws {
+        try requireSessionMetadata(for: sessionID)
+        let session = try decoder.decode(CaptureSession.self, from: Data(contentsOf: fileURL(for: sessionID)))
+        try validateSessionOwnership(session, expectedID: sessionID)
+        guard let manifest = session.takeManifests.first(where: { $0.id == transactionID }),
+              RecordingStateMachine.isFinalizable(manifest)
+        else { throw SessionStoreError.recordingFileNameMismatch }
+    }
+
+    private func requireSessionMetadata(for sessionID: UUID) throws {
+        let metadataURL = fileURL(for: sessionID)
+        if try isSymbolicLink(metadataURL) { throw SessionStoreError.sessionMetadataIsSymbolicLink }
+        guard FileManager.default.fileExists(atPath: metadataURL.path) else { throw CocoaError(.fileNoSuchFile) }
+    }
+
+    /// Interrupted takes are not session media yet; remove them once the session is gone.
+    /// Startup reconciliation removes any staging whose session metadata is missing, so a
+    /// failure here leaves no consented media behind past the next launch.
+    private func discardInterruptedTakes(of session: CaptureSession) {
+        for manifest in session.takeManifests {
+            guard let url = try? interruptedTakeURLLocked(sessionID: session.id, transactionID: manifest.id) else {
+                continue
+            }
+            try? FileManager.default.removeItem(at: url)
+        }
     }
 
 }

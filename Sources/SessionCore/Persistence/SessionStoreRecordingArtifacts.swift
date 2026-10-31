@@ -5,6 +5,7 @@ extension SessionStore {
         var removedStagingFileNames: [String] = []
         var restoredQuarantineFileNames: [String] = []
         var removedQuarantineFileNames: [String] = []
+        var preservedInterruptedTakeFileNames: [String] = []
         var relinkedSessionIDs: [UUID] = []
         var alreadyLinkedSessionIDs: [UUID] = []
         var diagnostics: [RecordingArtifactDiagnostic] = []
@@ -71,6 +72,7 @@ extension SessionStore {
         )
         values.restoredQuarantineFileNames = state.restoredQuarantineFileNames
         values.removedQuarantineFileNames = state.removedQuarantineFileNames
+        values.preservedInterruptedTakeFileNames = state.preservedInterruptedTakeFileNames
         return RecordingArtifactReconciliationReport(values)
     }
 

@@ -38,8 +38,8 @@ public struct CaptureRuntimeStatus: Equatable, Sendable {
     }
 }
 
-/// Capture limits shared by the preflight estimate and the platform's in-flight guardrails.
-/// The duration is bounded by `CaptureSession` (1...240 minutes) before it reaches this layer.
+/// Capture estimates for the preflight storage check and the in-flight free-capacity reserve.
+/// The planned duration is bounded by `CaptureSession` (1...240 minutes) and never caps a take.
 public enum CaptureCapacity {
     public static let estimatedBytesPerSecond: Int64 = 1_500_000
     public static let minimumFreeCapacityBytes: Int64 = 500_000_000
@@ -49,6 +49,7 @@ public enum CaptureCapacity {
         min(240, max(1, plannedDurationMinutes))
     }
 
+    /// Estimated file size for a planned duration. A planning value, never a recording cap.
     public static func maximumFileSize(forPlannedDurationMinutes plannedDurationMinutes: Int) -> Int64 {
         Int64(boundedDurationMinutes(plannedDurationMinutes)) * 60 * estimatedBytesPerSecond
     }

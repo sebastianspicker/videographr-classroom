@@ -33,6 +33,8 @@ This file is the single description of the gate; other documents link here.
    errors.
 5. Hardware-free Xcode app-unit tests on an iPhone Simulator, then
    signing-disabled Xcode Release Simulator analysis and build.
+   If the app-unit tests fail, the gate prints the test-result summary from
+   their Xcode result bundle before exiting with the test step's status.
 
 The app-unit tests cover capture-event generation filtering, exact transaction
 filtering, idempotent stop emission, autosave ordering, bootstrap and import

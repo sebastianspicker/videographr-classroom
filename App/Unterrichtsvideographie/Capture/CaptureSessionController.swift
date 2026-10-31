@@ -72,8 +72,13 @@ final class CaptureSessionController: NSObject {
         let stagedURL: URL
         let transaction: RecordingTransaction
         let artifacts: any RecordingArtifactSecuring
-        let maximumDuration: CMTime
-        let maximumFileSize: Int64
+    }
+
+    /// The planned duration is a planning value only; the free-capacity monitor is the single
+    /// automatic stop. Clear both AVFoundation caps so no earlier configuration truncates a take.
+    static func removeRecordingLimits(from output: AVCaptureMovieFileOutput) {
+        output.maxRecordedDuration = .invalid
+        output.maxRecordedFileSize = 0
     }
 
     struct StartRequest {
@@ -171,8 +176,7 @@ final class CaptureSessionController: NSObject {
                 return
             }
 
-            movieOutput.maxRecordedDuration = request.maximumDuration
-            movieOutput.maxRecordedFileSize = request.maximumFileSize
+            Self.removeRecordingLimits(from: movieOutput)
             self.recording = Recording(
                 transaction: request.transaction,
                 artifacts: request.artifacts,

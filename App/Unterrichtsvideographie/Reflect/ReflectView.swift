@@ -46,6 +46,10 @@ struct ReflectView: View {
     @State var annotationEndTimecode = ""
     @State var annotationEditorMessage: String?
     @State var isSavingAnnotation = false
+    @State var interruptedTakeIDs: [UUID] = []
+    @State var interruptedTakeMessage: String?
+    @State var isResolvingInterruptedTake = false
+    @State var interruptedTakePendingDiscard: UUID?
     @FocusState var annotationFocus: ReflectionAnnotationField?
     let onEditSession: () -> Void
     let initialSection: ReflectionSection
@@ -135,6 +139,10 @@ struct ReflectView: View {
             .paperSurface()
             .task(id: ReflectionMediaRequest(sessionID: appStore.session.id, assets: appStore.session.mediaAssets)) {
                 await refreshMediaAvailability()
+            }
+            .onChange(of: appStore.session.id) { _, _ in interruptedTakeMessage = nil }
+            .task(id: appStore.session.takeManifests.map { "\($0.id)-\($0.effectiveLifecycleState)" }) {
+                interruptedTakeIDs = await appStore.pendingInterruptedTakeIDs()
             }
             .task(id: selectedMediaURL) {
                 rangeStartMilliseconds = nil

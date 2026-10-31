@@ -285,9 +285,7 @@ extension LiveStore {
                 destinationURL: request.url,
                 stagedURL: request.stagedURL,
                 transaction: transaction,
-                artifacts: request.artifacts,
-                maximumDuration: CaptureGuardrails.duration(for: request.plannedDurationMinutes),
-                maximumFileSize: CaptureCapacity.maximumFileSize(forPlannedDurationMinutes: request.plannedDurationMinutes)
+                artifacts: request.artifacts
             )
         )
         return true

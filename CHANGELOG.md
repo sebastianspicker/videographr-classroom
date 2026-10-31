@@ -7,6 +7,17 @@ follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 - No release candidate is designated.
+- The planned duration no longer caps a take; it remains the input to the
+  storage preflight check.
+- Quick-link annotations in Reflect pass the same authority, author, note, and
+  interval checks as the annotation editor.
+- Live capture restarts after the app returns to the foreground during an
+  interrupted spoken-audio check.
+- A take interrupted by app termination is no longer deleted at the next launch.
+  It stays unverified until the operator attaches or discards it in Reflect.
+- Package unit suites and persisted-format contract tests are no longer part of
+  the public repository. The public automated layer is the hardware-free
+  app-unit target that the release gate runs on an iPhone Simulator.
 - Bound routine motion guidance updates, advance experimental windows only for
   fresh Vision observations, and record the sampling change in new provenance.
 - Reuse Vision requests and capture buffers while retaining audio clipping and
@@ -42,8 +53,8 @@ Proposed first public source alpha. The iOS bundle reports marketing version
   imports, and recovery for interrupted persistence operations.
 - Consent-scoped study packages with exact metadata membership, SHA-256 digests,
   durable export attempts, and per-attempt leases.
-- SwiftPM unit suites, hardware-free app-unit capture-event tests, architecture
-  checks, public-hygiene checks, and release Simulator analysis and build commands.
+- Hardware-free app-unit capture-event tests, architecture checks, public-hygiene
+  checks, and release Simulator analysis and build commands.
 
 ### Known limits
 

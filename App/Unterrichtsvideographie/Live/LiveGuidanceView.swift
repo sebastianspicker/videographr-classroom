@@ -107,8 +107,9 @@ struct LiveGuidanceView: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
                     liveStore.synchronizeSession()
+                    audioCheck.resumeAfterInactivity()
                 } else {
-                    audioCheck.cancel(resumeCapture: false)
+                    audioCheck.cancelForInactivity()
                 }
             }
             .onChange(of: appStore.session.id) { _, newValue in

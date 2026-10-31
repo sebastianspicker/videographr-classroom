@@ -43,19 +43,17 @@ extension ReflectView {
         reflectionTimecode(milliseconds)
     }
 
+    /// Quick links use the editor's author and note and pass the same admission as the editor.
     func addAnnotation(for prompt: ReflectionPromptID, wholeAsset: Bool) {
         guard let asset = selectedAsset else { return }
         let end = wholeAsset ? Int64(0) : playback.positionMilliseconds
         let start = wholeAsset ? Int64(0) : (rangeStartMilliseconds ?? end)
-        var values = EvidenceAnnotation.Values()
-        values.promptIdentifier = prompt.rawValue
-        values.mediaAssetID = asset.id
-        values.startMilliseconds = min(start, end)
-        values.endMilliseconds = max(start, end)
-        values.authorPseudonym = appStore.session.consentGrants.first?.participantGroupPseudonym ?? "local-reflection"
-        let annotation = EvidenceAnnotation(values)
-        appStore.edit { $0.evidenceAnnotations.append(annotation) }
-        rangeStartMilliseconds = nil
+        admitAndSaveAnnotation(
+            for: asset,
+            prompt: prompt,
+            start: .success(min(start, end)),
+            end: .success(max(start, end))
+        )
     }
 
     func populateAnnotationEditorFromPlayback() {
@@ -86,64 +84,42 @@ extension ReflectView {
             annotationEditorMessage = "Für diese Notiz ist kein lokales Video verfügbar."
             return
         }
+        admitAndSaveAnnotation(
+            for: asset,
+            prompt: focusedPrompt,
+            start: ReflectionAnnotationTimecode.parse(annotationStartTimecode),
+            end: ReflectionAnnotationTimecode.parse(annotationEndTimecode)
+        )
+    }
+
+    /// The single write path for human annotations; see `ReflectionAnnotationAdmission`.
+    private func admitAndSaveAnnotation(
+        for asset: SessionMediaAsset,
+        prompt: ReflectionPromptID,
+        start: Result<Int64, ReflectionAnnotationTimecode.ParseError>,
+        end: Result<Int64, ReflectionAnnotationTimecode.ParseError>
+    ) {
         let sessionID = appStore.session.id
         let assetID = asset.id
-        guard appStore.session.authorizes(.localReflection) else {
-            annotationEditorMessage = "Für diese Notiz fehlt eine aktuelle Freigabe für lokale Reflexion."
+        let admission = ReflectionAnnotationAdmission.admit(ReflectionAnnotationAdmission.Request(
+            prompt: prompt,
+            mediaAssetID: asset.id,
+            authorizesLocalReflection: appStore.session.authorizes(.localReflection),
+            durationMilliseconds: asset.durationMilliseconds,
+            author: annotationAuthor,
+            note: appStore.session.reflection[prompt],
+            start: start,
+            end: end
+        ))
+        let values: EvidenceAnnotation.Values
+        switch admission {
+        case .failure(let rejection):
+            annotationEditorMessage = rejection.messageDE
+            if let focus = rejection.focus { annotationFocus = focus }
             return
+        case .success(let admitted):
+            values = admitted
         }
-        guard let duration = asset.durationMilliseconds else {
-            annotationEditorMessage = "Die Videodauer wird noch geprüft. Bitte warten Sie, bevor Sie einen Zeitbereich sichern."
-            return
-        }
-        let author = annotationAuthor.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !author.isEmpty else {
-            annotationEditorMessage = "Bitte ein Autor-Pseudonym eingeben."
-            annotationFocus = .author
-            return
-        }
-        let note = appStore.session.reflection[focusedPrompt].trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !note.isEmpty else {
-            annotationEditorMessage = "Bitte eine menschlich verfasste Beobachtungsnotiz eingeben."
-            annotationFocus = .note
-            return
-        }
-        let startResult = ReflectionAnnotationTimecode.parse(annotationStartTimecode)
-        let endResult = ReflectionAnnotationTimecode.parse(annotationEndTimecode)
-        guard case let .success(start) = startResult,
-              case let .success(end) = endResult
-        else {
-            if case .failure = startResult {
-                annotationFocus = .start
-            } else {
-                annotationFocus = .end
-            }
-            annotationEditorMessage = [startResult, endResult].contains { result in
-                if case .failure(.outOfRange) = result { return true }
-                return false
-            }
-                ? "Zeitbereich ist zu groß."
-                : "Zeitangaben bitte als MM:SS eingeben."
-            return
-        }
-        guard start <= end else {
-            annotationEditorMessage = "Der Beginn des Zeitbereichs darf nicht nach dem Ende liegen."
-            annotationFocus = .end
-            return
-        }
-        if end > duration {
-            annotationEditorMessage = "Der Zeitbereich liegt außerhalb der bekannten Videodauer."
-            annotationFocus = .end
-            return
-        }
-
-        var values = EvidenceAnnotation.Values()
-        values.promptIdentifier = focusedPrompt.rawValue
-        values.mediaAssetID = asset.id
-        values.startMilliseconds = start
-        values.endMilliseconds = end
-        values.note = note
-        values.authorPseudonym = author
         appStore.edit { $0.evidenceAnnotations.append(EvidenceAnnotation(values)) }
         rangeStartMilliseconds = nil
         annotationEditorMessage = nil

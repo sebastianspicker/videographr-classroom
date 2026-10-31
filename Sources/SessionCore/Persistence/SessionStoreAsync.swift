@@ -35,6 +35,15 @@ public actor SessionStoreAsync: SessionRepository {
         try store.prepareStagedRecordingURL(for: sessionID, transactionID: transactionID)
     }
     public func discardStagedRecording(at url: URL) throws { try store.discardStagedRecording(at: url) }
+    public func interruptedTakeURL(sessionID: UUID, transactionID: UUID) throws -> URL? {
+        try store.interruptedTakeURL(sessionID: sessionID, transactionID: transactionID)
+    }
+    public func promoteInterruptedTake(sessionID: UUID, transactionID: UUID) throws -> URL {
+        try store.promoteInterruptedTake(sessionID: sessionID, transactionID: transactionID)
+    }
+    public func demoteInterruptedTake(sessionID: UUID, transactionID: UUID) throws {
+        try store.demoteInterruptedTake(sessionID: sessionID, transactionID: transactionID)
+    }
     public func secureFinalizedRecording(at url: URL) throws { try store.secureFinalizedRecording(at: url) }
     public func validatedMediaURL(for asset: SessionMediaAsset, sessionID: UUID) throws -> URL {
         try store.validatedMediaURL(for: asset, sessionID: sessionID)
@@ -118,8 +127,13 @@ public actor SessionStoreAsync: SessionRepository {
                 else { return nil }
                 return asset.id
             })
+            let preservedTakeIDs = Set(candidate.takeManifests.compactMap { manifest -> UUID? in
+                (try? store.interruptedTakeURL(sessionID: candidate.id, transactionID: manifest.id)) != nil
+                    ? manifest.id : nil
+            })
             var changed = candidate.failAbandonedTakes(
                 canonicalMediaAssetIDs: canonicalAssetIDs,
+                preservedTakeIDs: preservedTakeIDs,
                 at: closedAt
             ) > 0
             for index in candidate.exportEvents.indices

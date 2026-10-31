@@ -32,6 +32,12 @@ public protocol SessionRepository: Actor {
     func prepareRecordingURL(for session: CaptureSession) async throws -> URL
     func prepareStagedRecordingURL(for sessionID: UUID, transactionID: UUID) async throws -> URL
     func discardStagedRecording(at url: URL) async throws
+    /// The preserved staged media of an interrupted take, or nil when none exists.
+    func interruptedTakeURL(sessionID: UUID, transactionID: UUID) async throws -> URL?
+    /// Moves a preserved interrupted take to its session's canonical recording name.
+    func promoteInterruptedTake(sessionID: UUID, transactionID: UUID) async throws -> URL
+    /// Moves a promoted interrupted take back to staging after a failed attachment.
+    func demoteInterruptedTake(sessionID: UUID, transactionID: UUID) async throws
     func secureFinalizedRecording(at url: URL) async throws
     func validatedMediaURL(for asset: SessionMediaAsset, sessionID: UUID) async throws -> URL
     func importMedia(from sourceURL: URL, into sessionID: UUID) async throws -> SessionMediaAsset

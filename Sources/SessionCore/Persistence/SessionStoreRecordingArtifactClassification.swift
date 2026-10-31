@@ -37,14 +37,55 @@ extension SessionStore {
         _ url: URL, identity: (sessionID: UUID, transactionID: UUID)?,
         state: inout RecordingArtifactReconciliationState
     ) throws {
-        guard identity != nil else {
+        guard let identity else {
             appendDiagnostic(url.lastPathComponent, reason: .invalidReservedStagingName, to: &state)
             return
         }
         if activeImportedMediaTransactions.values.contains(where: {
             $0.transaction.staging.lastPathComponent == url.lastPathComponent
         }) { return }
+        if try preserveInterruptedTake(url, identity: identity, state: &state) { return }
         try removeStagedRecording(url, state: &state)
+    }
+
+    /// At startup no capture is in flight, so a staged take whose session still holds the
+    /// unresolved manifest was cut off by termination. Consented media is kept as
+    /// `completionUnknown` for an explicit operator decision instead of being deleted.
+    /// Returns false only when the file is disposable: its session is gone, or its take
+    /// is already finalized or failed.
+    func preserveInterruptedTake(
+        _ url: URL, identity: (sessionID: UUID, transactionID: UUID),
+        state: inout RecordingArtifactReconciliationState
+    ) throws -> Bool {
+        let fileName = url.lastPathComponent
+        guard try fileType(at: url) == .typeRegular else { return false }
+        let metadataURL = fileURL(for: identity.sessionID)
+        if try !isSymbolicLink(metadataURL), !FileManager.default.fileExists(atPath: metadataURL.path) {
+            return false
+        }
+        guard let metadata = try reconciliationMetadata(
+            for: identity.sessionID, artifactName: fileName, state: &state
+        ) else { return true }
+        guard let manifest = metadata.session.takeManifests.first(where: { $0.id == identity.transactionID }),
+              manifest.sessionID == metadata.session.id,
+              RecordingStateMachine.isFinalizable(manifest)
+        else { return false }
+        do {
+            try applyAndVerifyLocalArtifactPolicy(to: url)
+        } catch {
+            appendDiagnostic(fileName, reason: .artifactPolicyInvalid, to: &state)
+        }
+        var pending = metadata.session
+        if RecordingStateMachine.completionUnknown(
+            transactionID: identity.transactionID, in: &pending, at: Date()
+        ) {
+            guard try persistCanonicalRecordingLink(
+                CanonicalRecordingUpdate(session: pending, data: metadata.data, url: metadata.url, fileName: fileName),
+                state: &state, recordsRelink: false
+            ) else { return true }
+        }
+        state.preservedInterruptedTakeFileNames.append(fileName)
+        return true
     }
 
     func recordArtifactLinkDiagnostic(

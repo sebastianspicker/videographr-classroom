@@ -1,7 +1,9 @@
 # Research gap inventory
 
 This inventory separates current implementation from evidence that still requires
-device or study work.
+device or study work. "Unit-tested" refers to package suites that are maintained
+outside this public repository; a public checkout can rerun only the app-unit
+tests and the release gate.
 
 | Area | Current implementation | Current evidence | Required next evidence |
 |---|---|---|---|
