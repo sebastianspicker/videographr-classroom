@@ -5,12 +5,40 @@ reviewing classroom video. It records session context and scoped consent, captur
 one continuous local take, stores time-linked reflection notes, and exports a
 consent-scoped study package.
 
+<details>
+<summary>Status and limitations</summary>
+
+Videographr is independent research software for preparing, recording and
+reflecting on classroom video with explicit evidence boundaries. Developed
+independently alongside my main professional work. This source alpha is a
+work in progress and a starting point for methods evaluation and adaptation,
+rather than a finished classroom product. Physical-device capture and
+protection behavior still require validation; no signed app is supplied.
+
+**Disclaimer for recording and interpretation.** The software does not grant
+recording consent or institutional approval, establish legal compliance, or validate teaching
+quality and learning outcomes. You are responsible for participant
+permissions, research protocols and sensitive recordings. Test with
+appropriate material and review the documented limitations before use.
+
+</details>
+
 This repository contains the source for `v0.1.0-alpha.1`. It does not include a
 signed application, TestFlight build, App Store package, backend, or cloud service.
 
 Explore the [static interactive demo](https://sebastianspicker.github.io/videographr-classroom/)
 with synthetic fixture data. It demonstrates the current five-tab workflow but
 does not access a camera or microphone, read files, persist data, or create exports.
+
+The study package contains metadata and reflection notes. The recorded or imported
+video remains separate:
+
+```mermaid
+flowchart LR
+  Plan[Plan purpose and consent] --> Capture[Record a local take]
+  Capture --> Reflect[Add time-linked reflection notes]
+  Reflect --> Export[Export a metadata-only study package]
+```
 
 ## Purpose and scope
 
@@ -156,8 +184,10 @@ swift build --disable-sandbox \
   -Xswiftc -warnings-as-errors
 ```
 
-The CI workflow runs on pushes to `main` and `alpha/**`, pull requests targeting
-`main`, and manual dispatch.
+The CI workflow runs automatically for Dependabot-authored pull requests targeting
+`main`, and can also be started manually. Security scans may run on all pull
+requests, pushes to `main`, and a weekly schedule. Pages deployment requires a
+manual dispatch from `main`.
 
 ## Testing
 

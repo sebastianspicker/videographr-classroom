@@ -162,3 +162,6 @@ secrets.local.*
 /captures/
 /exports/
 /recordings/
+
+# Local GitHub work inventory
+/THINGS_TO_DO_LEDGER.md

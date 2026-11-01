@@ -285,7 +285,8 @@ Xcode target links those local package products and owns all Apple-framework
 integration. The shared scheme contains one host-bound app-unit target and no UI
 test target.
 
-CI runs the repository release gate on macOS. A separate Pages workflow verifies
+Dependabot pull requests and manual CI runs execute the repository release gate on
+macOS. A separate, manually dispatched Pages workflow verifies
 and uploads `docs/demo/` as a static artifact. This repository contains no binary
 deployment, signing, TestFlight, App Store, backend, migration, or
 service-operations path. See [the source release procedure](../RELEASING.md).
