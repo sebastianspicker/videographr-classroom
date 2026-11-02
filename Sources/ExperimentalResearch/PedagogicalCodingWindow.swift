@@ -87,8 +87,9 @@ public struct PedagogicalCodingWindow: Equatable, Sendable {
             level += value.level
             confidence += value.confidence
         }
-        level /= Double(values.count)
-        confidence /= Double(values.count)
+        // Frames without the code count as 0, so rare strong codes do not outrank steady ones.
+        level /= Double(samples.count)
+        confidence /= Double(samples.count)
         let identity = PedagogicalCodeAssignment.Identity(id: "\(family.rawValue)-\(code)", family: family)
         let descriptor = PedagogicalCodeAssignment.Descriptor(code: code, labelDE: recent.labelDE)
         let measurement = PedagogicalCodeAssignment.Measurement(level: level, confidence: confidence)

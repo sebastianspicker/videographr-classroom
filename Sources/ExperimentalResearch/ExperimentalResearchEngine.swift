@@ -9,16 +9,7 @@ public struct ExperimentalResearchResult: Equatable, Sendable {
     public var teachingSituation: TeachingSituationID
     public var scene: TeachingSceneAssessment
     public var coding: PedagogicalCodingResult
-    public var structureSufficiency: ResearchStructureSufficiency
-    public var researchQuality: ResearchCaptureQuality
     public var hypotheses: ExperimentalHypothesisSet
-
-    public var isUnvalidatedRuleSetPass: Bool {
-        observability.placement.directSignalsPass
-            && scene.matchesPreset
-            && structureSufficiency.sufficient
-            && researchQuality.level != .unsuitable
-    }
 }
 
 public struct ExperimentalResearchEngine: Sendable {
@@ -26,12 +17,6 @@ public struct ExperimentalResearchEngine: Sendable {
 
     public init(guidance: GuidanceEngine = GuidanceEngine()) {
         self.guidance = guidance
-    }
-
-    var config: GuidanceConfig { guidance.config }
-
-    func percent(_ value: Double) -> String {
-        "\(Int((value * 100).rounded())) %"
     }
 
     public func evaluate(
@@ -72,24 +57,14 @@ public struct ExperimentalResearchEngine: Sendable {
         let coding = PedagogicalCoder.code(PedagogicalCodeInput(
             cv: cv,
             scene: scene,
-            settings: .init(teachingSituation: teachingSituation, frame: frame, analysisFocus: analysisFocus)
+            settings: .init(teachingSituation: teachingSituation, frame: frame, analysisFocus: analysisFocus),
+            signals: signals
         ))
-        let structure = ResearchStructureAssessor.assess(cv: cv, scene: scene, teachingSituation: teachingSituation)
-        var qualityInput = ResearchCaptureQuality.AssessmentInput(
-            placement: observability.placement,
-            scene: scene,
-            coding: coding
-        )
-        qualityInput.teachingSituation = teachingSituation
-        qualityInput.structureSufficiency = structure
-        let quality = ResearchCaptureQuality.assess(qualityInput)
         return ExperimentalResearchResult(
             observability: observability,
             teachingSituation: teachingSituation,
             scene: scene,
             coding: coding,
-            structureSufficiency: structure,
-            researchQuality: quality,
             hypotheses: ExperimentalHypothesisSet(
                 hypotheses: (coding.ipnDimensions + coding.timssActivities + coding.gtiDimensions).map(ExperimentalHypothesis.init)
             )

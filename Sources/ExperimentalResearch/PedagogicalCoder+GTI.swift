@@ -13,7 +13,7 @@ extension PedagogicalCoder {
         return gtiLevels(input).map { code, raw in
             let level = gtiBoost(code, raw: raw, preset: preset, focus: focus)
             return gtiAssignment(code: code, level: level, confidence: confidence)
-        }
+        }.sorted(by: stablePedagogicalAssignmentOrder)
     }
 }
 

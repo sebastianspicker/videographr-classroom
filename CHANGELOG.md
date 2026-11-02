@@ -7,6 +7,27 @@ follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 - No release candidate is designated.
+- A running take continues while the app is only briefly inactive (Control
+  Center, Notification Center, system alerts, Siri). Backgrounding and capture
+  interruptions still end it.
+- A take whose file was written is no longer deleted when protecting, checking,
+  or linking it fails. It is kept as an interrupted take for "Prüfen und
+  übernehmen" or "Verwerfen" in Reflect. Media is removed only when the frozen
+  consent is refused at finalization or the session was deleted meanwhile.
+- Long takes no longer end with a false "Finalisierung nicht bestätigt"
+  message; the metadata watchdog scales with the file size.
+- Device tilt and horizon are measured from gravity relative to the mount
+  orientation, so a level phone on a tripod no longer reads as tilted by 90°.
+- Horizon, exposure, and stability readiness use the same limits as the
+  guidance hints. Audio dropouts during a take are critical hints, and audio
+  that stops arriving for more than 2 s counts as a dropout.
+- Study packages no longer contain the original file name of imported videos.
+- Startup cleanup keeps observation and coding journals of sessions whose file
+  cannot be read, and an interrupted import no longer causes false recording
+  warnings.
+- Experimental coding windows average each code over all frames, and GTI rows
+  have a stable order. Unused experimental scoring, tips, and catalogues were
+  removed; stored hypotheses are unchanged.
 - The planned duration no longer caps a take; it remains the input to the
   storage preflight check.
 - Quick-link annotations in Reflect pass the same authority, author, note, and

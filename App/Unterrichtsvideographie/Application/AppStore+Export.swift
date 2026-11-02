@@ -43,7 +43,7 @@ extension AppStore {
             await reloadListAsync()
             return PreparedExport(id: preparation.eventID, sessionID: sessionID, packageURL: packageURL)
         } catch {
-            await packageWriter.discardFailedPreparation(at: packageURL)
+            await packageWriter.removePackage(at: packageURL)
             throw error
         }
     }

@@ -42,8 +42,24 @@ public struct ResearchStructureSufficiency: Equatable, Sendable {
         summaryDE = values.summaryDE
         actionHintDE = values.actionHintDE
     }
+}
 
-    public var failedChecks: [ResearchStructureCheck] { checks.filter { !$0.ok } }
+public struct ResearchQualityDimension: Equatable, Identifiable, Sendable {
+    public typealias Values = (id: String, labelDE: String, ok: Bool, score: Double, detailDE: String)
+
+    public var id: String
+    public var labelDE: String
+    public var ok: Bool
+    public var score: Double
+    public var detailDE: String
+
+    public init(_ values: Values) {
+        id = values.id
+        labelDE = values.labelDE
+        ok = values.ok
+        score = min(1, max(0, values.score))
+        detailDE = values.detailDE
+    }
 }
 
 /// Compatibility alias that reuses the `ResearchQualityDimension` data shape.
@@ -56,9 +72,15 @@ enum ResearchStructureAssessor: Sendable {
     public static func assess(
         cv: CVFeatures,
         scene: TeachingSceneAssessment,
-        teachingSituation: TeachingSituationID
+        teachingSituation: TeachingSituationID,
+        signals: ExperimentalCaptureSignals
     ) -> ResearchStructureSufficiency {
-        let context = ResearchStructureContext(cv: cv, scene: scene, situation: teachingSituation)
+        let context = ResearchStructureContext(
+            cv: cv,
+            scene: scene,
+            situation: teachingSituation,
+            signals: signals
+        )
         guard cv.analysisSucceeded else { return unavailableResult(context) }
         return assessedResult(context, checks: structureChecks(context))
     }
@@ -112,7 +134,7 @@ enum ResearchStructureAssessor: Sendable {
         sufficient: Bool
     ) -> String {
         if sufficient {
-            return "Struktur-CV genügt „\(context.preset.titleDE)“ (Score \(pct(score)), Szene \(context.scene.sceneType.titleDE))."
+            return "Struktur-CV genügt „\(context.preset.titleDE)“ (Score \(percentText(score)), Szene \(context.scene.sceneType.titleDE))."
         }
         let failures = checks.filter { !$0.ok }.map(\.labelDE).joined(separator: ", ")
         return "Struktur unzureichend für „\(context.preset.titleDE)“: \(failures)."
@@ -123,24 +145,5 @@ enum ResearchStructureAssessor: Sendable {
         return context.preset.mismatchHintDE.isEmpty
             ? context.preset.captureGuidanceDE
             : context.preset.mismatchHintDE
-    }
-
-    /// Matrix: every catalogue preset vs a fixture CV - for tests and research docs.
-    public static func matrix(
-        fixtures: [(name: String, cv: CVFeatures)]
-    ) -> [(preset: TeachingSituationID, fixture: String, sufficient: Bool, score: Double, scene: TeachingSceneType)] {
-        var rows: [(TeachingSituationID, String, Bool, Double, TeachingSceneType)] = []
-        for preset in TeachingSituationID.allCases {
-            for f in fixtures {
-                let scene = TeachingSceneAssessor.assess(cv: f.cv, preset: preset)
-                let s = assess(cv: f.cv, scene: scene, teachingSituation: preset)
-                rows.append((preset, f.name, s.sufficient, s.score, scene.sceneType))
-            }
-        }
-        return rows
-    }
-
-    static func pct(_ v: Double) -> String {
-        "\(Int((v * 100).rounded())) %"
     }
 }

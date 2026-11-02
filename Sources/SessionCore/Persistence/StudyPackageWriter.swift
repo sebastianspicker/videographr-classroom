@@ -215,11 +215,6 @@ public actor StudyPackageWriter {
         }
     }
 
-    /// No outbox attempt exists when construction or its pre-audit fails.
-    public func discardFailedPreparation(at packageURL: URL) async {
-        await removePackage(at: packageURL)
-    }
-
     private static func packageSessionID(from packageURL: URL) -> UUID? {
         guard packageURL.pathExtension == "videographrstudy" else { return nil }
         let stem = packageURL.deletingPathExtension().lastPathComponent

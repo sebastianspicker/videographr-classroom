@@ -33,7 +33,10 @@ extension GuidanceEngine {
         motionTips(motion)
     }
 
-    public func percent(_ value: Double) -> String {
-        "\(Int((value * 100).rounded())) %"
-    }
+}
+
+/// Whole-percent text for a 0...1 measure; a non-finite or absurd value reads as unavailable instead of trapping.
+public func percentText(_ value: Double) -> String {
+    guard value.isFinite, abs(value) <= 1_000 else { return "– %" }
+    return "\(Int((value * 100).rounded())) %"
 }

@@ -47,7 +47,7 @@ APP_SOURCES = ROOT / "App" / "Unterrichtsvideographie"
 # Only durable app orchestration and the composition root may hold the persistence store.
 APP_PERSISTENCE_OWNERS = (APP_SOURCES / "Application", APP_SOURCES / "UnterrichtsvideographieApp.swift")
 PERSISTENCE_REFERENCE = re.compile(
-    r"\bSessionStore\w*\b|\bSessionRepository\b|\basyncStore\b|\bappStore\.store\b"
+    r"\bSessionStore\w*\b|\basyncStore\b|\bappStore\.store\b"
 )
 STRING_LITERAL_OR_LINE_COMMENT = re.compile(r'"(?:\\.|[^"\\\n])*"|//[^\n]*')
 

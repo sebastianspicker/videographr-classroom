@@ -236,6 +236,8 @@ public struct StudyExportProjection: Equatable, Sendable {
         // Disclosure attempts are a local outbox/audit trail. They describe where
         // earlier packages went and must never become content of a later package.
         projected.exportEvents = []
+        // The imported file's name can identify a person; it stays local and out of the package.
+        for index in projected.mediaAssets.indices { projected.mediaAssets[index].originalFileName = nil }
         projected.evidenceAnnotations = []
         projected.captureObservations = []
         projected.codingSnapshots = []

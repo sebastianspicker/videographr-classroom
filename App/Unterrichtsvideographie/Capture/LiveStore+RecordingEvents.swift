@@ -115,6 +115,10 @@ extension LiveStore {
         }
         if handleRecordingStateEvent(event) { return }
         if handleRecordingCompletionEvent(event) { return }
+        if case let .recordingKeptUnverified(transaction, reason) = event {
+            handleRecordingKeptUnverified(transaction, reason: reason)
+            return
+        }
         handleRecordingFailureEvent(event)
     }
 
@@ -175,7 +179,11 @@ extension LiveStore {
     private func handleRecordingFinished(_ transaction: RecordingTransaction, url: URL) {
         cancelWatchdog(.startAcknowledgement, for: transaction)
         cancelWatchdog(.finalization, for: transaction)
-        if acceptsRecordingEvent(for: transaction) { armMetadataAttachmentWatchdog(for: transaction) }
+        if acceptsRecordingEvent(for: transaction) {
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            // shortcut: assumes ≥250 MB/s read+hash on device, measure on the slowest supported device
+            armMetadataAttachmentWatchdog(for: transaction, timeout: 8 + Double(size) / 250_000_000)
+        }
         Task { [weak self] in
             await self?.resolveFinishedRecording(transaction: transaction, url: url)
         }
@@ -217,36 +225,56 @@ extension LiveStore {
         }
     }
 
+    /// Written media that could not be secured is kept for an operator decision, never failed.
+    private func handleRecordingKeptUnverified(_ transaction: RecordingTransaction, reason: String) {
+        cancelWatchdog(.startAcknowledgement, for: transaction)
+        cancelWatchdog(.finalization, for: transaction)
+        cancelWatchdog(.metadataAttachment, for: transaction)
+        let isActive = acceptsRecordingEvent(for: transaction)
+        guard isActive || deferredArtifactTransactions.removeValue(forKey: transaction) != nil else { return }
+        Task { await appStore.keepUnresolvedTake(transaction, reason: reason) }
+        if isActive { completeRecordingTransaction(transaction, status: Self.keptRecordingStatus) }
+    }
+
+    static let keptRecordingStatus = "Aufnahme aufbewahrt – in Reflektieren prüfen oder verwerfen."
+
     internal func acceptsRecordingEvent(for transaction: RecordingTransaction) -> Bool {
         activeRecordingTransaction == transaction
     }
 
     internal func resolveFinishedRecording(transaction: RecordingTransaction, url: URL) async {
         guard acceptsRecordingEvent(for: transaction) || deferredArtifactTransactions[transaction] != nil else { return }
-        let metadataAttached = await appStore.attachRecording(
+        let outcome = await appStore.attachRecording(
             for: transaction,
             finalizedURL: url,
             runtimeStatus: runtimeStatus
         )
         cancelWatchdog(.metadataAttachment, for: transaction)
         if acceptsRecordingEvent(for: transaction) {
-            resolveActiveFinishedRecording(transaction, url: url, metadataAttached: metadataAttached)
+            resolveActiveFinishedRecording(transaction, url: url, outcome: outcome)
             return
         }
-        resolveDeferredFinishedRecording(transaction, url: url, metadataAttached: metadataAttached)
+        resolveDeferredFinishedRecording(transaction, url: url, outcome: outcome)
     }
 
     private func resolveActiveFinishedRecording(
         _ transaction: RecordingTransaction,
         url: URL,
-        metadataAttached: Bool
+        outcome: RecordingAttachmentOutcome
     ) {
-        guard metadataAttached else {
+        switch outcome {
+        case .attached:
+            break
+        case .refused:
             isStartingRecording = false
             isRecording = false
             isFinalizingRecording = true
             recordStatusMessage = "Aufnahme-Metadaten werden zurückgerollt…"
             capture.rollbackPromotedRecording(url, for: transaction)
+            return
+        case .kept:
+            capture.confirmPromotedRecording(for: transaction)
+            completeRecordingTransaction(transaction, status: Self.keptRecordingStatus)
             return
         }
         isRecording = false
@@ -257,18 +285,24 @@ extension LiveStore {
         completeRecordingTransaction(transaction, status: "Aufnahme gespeichert")
     }
 
-    private func resolveDeferredFinishedRecording(
+    internal func resolveDeferredFinishedRecording(
         _ transaction: RecordingTransaction,
         url: URL,
-        metadataAttached: Bool
+        outcome: RecordingAttachmentOutcome
     ) {
         guard deferredArtifactTransactions[transaction] != nil else { return }
-        if metadataAttached {
+        switch outcome {
+        case .attached:
             capture.confirmPromotedRecording(for: transaction)
             deferredArtifactTransactions.removeValue(forKey: transaction)
-            return
+            // Replaces the watchdog's "not confirmed" text unless a newer take owns the status.
+            if activeRecordingTransaction == nil { recordStatusMessage = "Aufnahme gespeichert" }
+        case .refused:
+            capture.rollbackPromotedRecording(url, for: transaction)
+        case .kept:
+            capture.confirmPromotedRecording(for: transaction)
+            deferredArtifactTransactions.removeValue(forKey: transaction)
         }
-        capture.rollbackPromotedRecording(url, for: transaction)
     }
 
 }

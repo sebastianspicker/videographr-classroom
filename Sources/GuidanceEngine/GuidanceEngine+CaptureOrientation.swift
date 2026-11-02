@@ -67,18 +67,17 @@ extension GuidanceEngine {
     }
 
     func ceilingAndFloorTips(_ orientation: OrientationSample, frame: FrameMetrics) -> [GuidanceTip] {
-        ceilingTips(orientation, frame: frame) + floorTips(orientation, frame: frame)
+        ceilingTips(frame) + floorTips(frame)
     }
 
-    private func ceilingTips(_ orientation: OrientationSample, frame: FrameMetrics) -> [GuidanceTip] {
-        let pitchBoost = max(0, orientation.pitchDegrees) / 45.0
-        let ceiling = min(1.0, frame.ceilingFraction + pitchBoost * 0.25)
+    private func ceilingTips(_ frame: FrameMetrics) -> [GuidanceTip] {
+        let ceiling = frame.ceilingFraction
         if ceiling > config.ceilingCriticalFraction {
             return [GuidanceTip((
                 id: "ceiling-critical",
                 category: .ceiling,
                 severity: .critical,
-                message: "Zu viel Decke (ca. \(percent(ceiling))). Unterrichtsvideographie braucht den Interaktionsraum, nicht die Raumhöhe.",
+                message: "Zu viel Decke (ca. \(percentText(ceiling))). Unterrichtsvideographie braucht den Interaktionsraum, nicht die Raumhöhe.",
                 actionHint: "1) Neigung nach unten. 2) Optional Stativ 10 cm senken. Ziel: Decke nur noch schmaler Streifen am oberen Rand."
             ))]
         }
@@ -87,7 +86,7 @@ extension GuidanceEngine {
                 id: "ceiling-warning",
                 category: .ceiling,
                 severity: .warning,
-                message: "Auffällig viel Deckenanteil (ca. \(percent(ceiling))).",
+                message: "Auffällig viel Deckenanteil (ca. \(percentText(ceiling))).",
                 actionHint: "Leicht nach unten neigen und Bildausschnitt auf Tafel + vordere Sitzreihen legen."
             ))]
         }
@@ -102,15 +101,14 @@ extension GuidanceEngine {
         ))]
     }
 
-    private func floorTips(_ orientation: OrientationSample, frame: FrameMetrics) -> [GuidanceTip] {
-        let pitchBoost = max(0, -orientation.pitchDegrees) / 40.0
-        let floor = min(1.0, frame.floorFraction + pitchBoost * 0.3)
+    private func floorTips(_ frame: FrameMetrics) -> [GuidanceTip] {
+        let floor = frame.floorFraction
         if floor > config.floorCriticalFraction {
             return [GuidanceTip((
                 id: "floor-critical",
                 category: .composition,
                 severity: .critical,
-                message: "Zu viel Boden/Bänke im Bild (ca. \(percent(floor))). Mimik und Tafelarbeit erscheinen klein im Bild.",
+                message: "Zu viel Boden/Bänke im Bild (ca. \(percentText(floor))). Mimik und Tafelarbeit erscheinen klein im Bild.",
                 actionHint: "Stativ anheben und leicht nach oben neigen; näher an die vordere Interaktionszone heranrücken (ohne SuS-Gesichter unnötig nah)."
             ))]
         }
@@ -119,7 +117,7 @@ extension GuidanceEngine {
             id: "floor-warning",
             category: .composition,
             severity: .warning,
-            message: "Bodenanteil hoch (ca. \(percent(floor))).",
+            message: "Bodenanteil hoch (ca. \(percentText(floor))).",
             actionHint: "Gerät etwas höher setzen oder 5–8° nach oben neigen."
         ))]
     }

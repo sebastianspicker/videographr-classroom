@@ -153,14 +153,14 @@ extension SessionStore {
 
     func removeOrphanJournals(
         in directory: URL,
-        knownSessions: [UUID: CaptureSession],
+        existingSessionIDs: Set<UUID>,
         removedFileNames: inout [String],
         diagnostics: inout [RecordingArtifactDiagnostic]
     ) throws {
         for url in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
             guard url.pathExtension == "jsonl",
                   let id = UUID(uuidString: url.deletingPathExtension().lastPathComponent),
-                  knownSessions[id] == nil
+                  !existingSessionIDs.contains(id)
             else { continue }
             let isSymbolicLink = try isSymbolicLink(url)
             let isRegularFile = try fileType(at: url) == .typeRegular
@@ -225,11 +225,9 @@ extension SessionStore {
     }
 
     private func validJournalData(at url: URL, invalidError: SessionStoreError) throws -> Data {
-        let requirements = [
-            try fileType(at: url) == .typeRegular,
-            try regularFileSize(at: url) <= Int64(Self.maximumObservationJournalBytes)
-        ]
-        guard requirements.allSatisfy({ $0 }) else { throw invalidError }
+        guard try fileType(at: url) == .typeRegular,
+              try regularFileSize(at: url) <= Int64(Self.maximumObservationJournalBytes)
+        else { throw invalidError }
         return try Data(contentsOf: url)
     }
 

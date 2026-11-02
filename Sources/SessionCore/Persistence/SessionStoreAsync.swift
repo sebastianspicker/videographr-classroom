@@ -1,15 +1,35 @@
 import Foundation
 
+public struct SessionPersistenceBootstrap: Sendable {
+    public let recordingReconciliation: RecordingArtifactReconciliationReport
+    public let persistenceReconciliation: PersistenceArtifactReconciliationReport
+    public let listing: SessionStoreListing
+    public let activeSession: CaptureSession?
+
+    public init(
+        recordingReconciliation: RecordingArtifactReconciliationReport,
+        persistenceReconciliation: PersistenceArtifactReconciliationReport,
+        listing: SessionStoreListing,
+        activeSession: CaptureSession?
+    ) {
+        self.recordingReconciliation = recordingReconciliation
+        self.persistenceReconciliation = persistenceReconciliation
+        self.listing = listing
+        self.activeSession = activeSession
+    }
+}
+
 /// Actor-isolated facade for callers that must not perform storage work from the main actor.
-public actor SessionStoreAsync: SessionRepository {
+public actor SessionStoreAsync {
     private let store: SessionStore
 
     public init(store: SessionStore) { self.store = store }
     public func bootstrapPersistence() throws -> SessionPersistenceBootstrap {
+        // Import cleanup first: its marker shares the staging prefix and would raise false recording warnings.
+        let persistenceReconciliation = try store.reconcilePersistenceArtifacts()
         let recordingReconciliation = try store.reconcileRecordingArtifacts()
         try reconcileInterruptedSessionMetadata()
-        let persistenceReconciliation = try store.reconcilePersistenceArtifacts()
-        let listing = try store.listSessionsWithDiagnostics(includeJournals: false)
+        let listing = try store.listSessionsWithDiagnostics()
         let activeSession = try listing.sessions.first.flatMap { try store.load(id: $0.id) }
         return SessionPersistenceBootstrap(
             recordingReconciliation: recordingReconciliation,
@@ -20,12 +40,8 @@ public actor SessionStoreAsync: SessionRepository {
     }
     public func save(_ session: CaptureSession) throws { try store.save(session) }
     public func load(id: UUID) throws -> CaptureSession? { try store.load(id: id) }
-    public func listSessions() throws -> [CaptureSession] { try store.listSessions() }
-    public func listSessionsWithDiagnostics() throws -> SessionStoreListing {
-        try store.listSessionsWithDiagnostics()
-    }
     public func listSessionSummariesWithDiagnostics() throws -> SessionStoreListing {
-        try store.listSessionsWithDiagnostics(includeJournals: false)
+        try store.listSessionsWithDiagnostics()
     }
     public func deleteSessionAndMedia(id: UUID) throws { try store.deleteSessionAndMedia(id: id) }
     public func prepareRecordingURL(for session: CaptureSession) throws -> URL {
@@ -66,9 +82,6 @@ public actor SessionStoreAsync: SessionRepository {
     }
     public func discardUncommittedImportedMedia(_ asset: SessionMediaAsset, from sessionID: UUID) throws {
         try store.discardUncommittedImportedMedia(asset, from: sessionID)
-    }
-    public func appendCaptureObservation(_ observation: CaptureObservation, toSession id: UUID) throws {
-        try store.appendCaptureObservation(observation, toSession: id)
     }
     public func appendCodingSnapshot(_ snapshot: ResearchCodingSnapshot, toSession id: UUID) throws {
         try store.appendCodingSnapshot(snapshot, toSession: id)
@@ -119,7 +132,7 @@ public actor SessionStoreAsync: SessionRepository {
     }
 
     private func reconcileInterruptedSessionMetadata() throws {
-        for var candidate in try store.listSessionsWithDiagnostics(includeJournals: false).sessions {
+        for var candidate in try store.listSessionsWithDiagnostics().sessions {
             let closedAt = Date()
             let canonicalAssetIDs = Set(candidate.mediaAssets.compactMap { asset -> UUID? in
                 guard let url = try? store.validatedMediaURL(for: asset, sessionID: candidate.id),

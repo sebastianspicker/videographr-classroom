@@ -152,58 +152,9 @@ extension SessionStore {
         }
     }
 
-    /// Atomically upgrades one legacy session after it has been successfully decoded.
-    /// The prior bytes remain in place if write, policy application, or read-back fails.
-    @discardableResult
-    public func migrateLegacySession(id: UUID) throws -> CaptureSession? {
-        let url = fileURL(for: id)
-        return try queue.sync { try migrateLegacySessionLocked(id: id, url: url) }
-    }
-
-    private func migrateLegacySessionLocked(id: UUID, url: URL) throws -> CaptureSession? {
-        try validateStoreDirectories()
-        if try isSymbolicLink(url) { throw SessionStoreError.sessionMetadataIsSymbolicLink }
-        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-        let previousData = try Data(contentsOf: url)
-        var session = try decoder.decode(CaptureSession.self, from: previousData)
-        try validateSessionOwnership(session, expectedID: id)
-        guard migrationIsRequired(for: session) else { return try mergedWithJournals(session) }
-        try persistMigratedLegacySession(&session, id: id, previousData: previousData, url: url)
-        return try mergedWithJournals(session)
-    }
-
-    private func migrationIsRequired(for session: CaptureSession) -> Bool {
-        session.schemaVersion < SessionSchema.currentVersion || !session.captureObservations.isEmpty
-    }
-
-    private func persistMigratedLegacySession(
-        _ session: inout CaptureSession, id: UUID, previousData: Data, url: URL
-    ) throws {
-        if session.schemaVersion < SessionSchema.currentVersion { session.migrateLegacyDataIfNeeded() }
-        try appendObservationsToJournal(session.captureObservations, sessionID: id)
-        session.captureObservations.removeAll()
-        try validateSessionOwnership(session, expectedID: id)
-        let migratedData = try encoder.encode(session)
-        try transactionallyWriteMetadata(migratedData, replacing: previousData, at: url) {
-            try verifyMigratedSession(at: url, expectedID: id)
-        }
-    }
-
-    private func verifyMigratedSession(at url: URL, expectedID: UUID) throws {
-        let persisted = try validatedPersistedSession(at: url, expectedID: expectedID)
-        guard persisted.schemaVersion == SessionSchema.currentVersion else {
-            throw SessionStoreError.sessionIdentifierMismatch
-        }
-    }
-
-    /// All sessions sorted by `updatedAt` descending.
-    public func listSessions() throws -> [CaptureSession] {
-        try listSessionsWithDiagnostics().sessions
-    }
-
     /// Lists readable session JSON files and retains failures for malformed files.
-    /// Directory enumeration itself still throws.
-    public func listSessionsWithDiagnostics(includeJournals: Bool = true) throws -> SessionStoreListing {
+    /// Directory enumeration itself still throws. Sessions are metadata-only; journals are not merged.
+    public func listSessionsWithDiagnostics() throws -> SessionStoreListing {
         try queue.sync {
             try validateStoreDirectories()
             let urls = try FileManager.default.contentsOfDirectory(
@@ -217,7 +168,7 @@ extension SessionStore {
                 .sorted(by: { $0.lastPathComponent < $1.lastPathComponent })
             for url in sessionURLs {
                 do {
-                    sessions.append(try listedSession(at: url, includeJournals: includeJournals))
+                    sessions.append(try listedSession(at: url))
                 } catch {
                     failures.append(SessionStoreFileFailure(
                         fileName: url.lastPathComponent,
@@ -236,7 +187,7 @@ extension SessionStore {
         }
     }
 
-    private func listedSession(at url: URL, includeJournals: Bool) throws -> CaptureSession {
+    private func listedSession(at url: URL) throws -> CaptureSession {
         if try isSymbolicLink(url) { throw SessionStoreError.sessionMetadataIsSymbolicLink }
         let data = try Data(contentsOf: url)
         let session = try decoder.decode(CaptureSession.self, from: data)
@@ -245,12 +196,12 @@ extension SessionStore {
             throw SessionStoreError.sessionIdentifierMismatch
         }
         try validateSessionOwnership(session, expectedID: expectedID)
-        return includeJournals ? try mergedWithJournals(session) : session
+        return session
     }
 
     /// Appends a durable JSONL observation without rewriting session metadata.
     /// Repeated observation IDs are ignored, so retrying after an interrupted caller is safe.
-    public func appendCaptureObservation(_ observation: CaptureObservation, toSession id: UUID) throws {
+    func appendCaptureObservation(_ observation: CaptureObservation, toSession id: UUID) throws {
         try queue.sync {
             _ = try requiredSessionMetadata(id: id)
             try appendObservationsToJournal([observation], sessionID: id)

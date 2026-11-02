@@ -45,7 +45,7 @@ final class VisionClassroomAnalyzer {
 
         let board = BoardObservation(requests: requests, coverage: coverage)
         let people = PeopleObservation(requests: requests, requestCoverage: coverage)
-        let layout = people.layout(board: board.rect, confidence: board.confidence)
+        let layout = people.layout()
         let saliency = coverage.includesSaliencyAndPose ? requests.saliency.results?.first : nil
         let raw = makeFeatures(board: board, people: people, layout: layout, saliency: saliency)
         let features = smoother.push(raw)

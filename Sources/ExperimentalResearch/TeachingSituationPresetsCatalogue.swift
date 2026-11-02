@@ -21,7 +21,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.frontalRows, .presentationFocus]
             values.mismatchHintDE = "Für Tafelunterricht Schreibfläche und Akteure gemeinsam frontal-seitlich erfassen - nicht nur leere Wand oder reine Gruppenarbeit."
             values.captureGuidanceDE = "Seitlich-frontal aufstellen: Tafel vollständig, Lehrperson und vordere Reihen im Interaktionsband; Stativ brusthoch, Horizont gerade."
-            values.researchAnchorDE = "IPN-Videostudie / Seidel: Lehr-Lern-Rahmen mit sichtbarer Ziel- und Organisationsstruktur."
         },
         TeachingSituationPreset.make { values in
             values.id = .teacherLedDialogue
@@ -41,7 +40,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.dyadClose, .frontalRows]
             values.mismatchHintDE = "Dialog braucht mindestens zwei lesbare Akteure in der Bildmitte - nicht leeren Raum oder nur Tafel."
             values.captureGuidanceDE = "Näher heran: Gesichter der Dialogpartner lesbar, leichte Tafel im Hintergrund ok; wenig Decke, engerer Ausschnitt."
-            values.researchAnchorDE = "IRE/Dialogmuster (TIMSS recitation; IPN Lernunterstützung) - Interaktion, nicht nur Tafelwand."
         },
         TeachingSituationPreset.make { values in
             values.id = .collaborativeGroupWork
@@ -61,7 +59,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.multiCluster, .sparseSpread]
             values.mismatchHintDE = "Gruppenarbeit erfordert mehrere Personen im Bild - frontal-Tafel-only oder leerer Raum passen nicht."
             values.captureGuidanceDE = "Gruppe(n) im Mittelband halten; Tafel darf am Rand sein. Mehrere Köpfe/Oberkörper sichtbar, nicht nur eine Person."
-            values.researchAnchorDE = "TIMSS group work / seatwork collaborative; IPN Sozialklima und Lernunterstützung."
         },
         TeachingSituationPreset.make { values in
             values.id = .partnerWork
@@ -81,7 +78,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.dyadClose]
             values.mismatchHintDE = "Partnerarbeit: zwei SuS/Akteure in der Mitte halten - nicht nur Tafel oder Raumübersicht ohne Paar."
             values.captureGuidanceDE = "Paar am Tisch zentrieren; beide Akteure gleichgewichtig; Tafel optional im Hintergrund."
-            values.researchAnchorDE = "TIMSS partner work - dyadische Interaktion als Skriptsegment."
         },
         TeachingSituationPreset.make { values in
             values.id = .studentBoardPresentation
@@ -101,7 +97,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.presentationFocus, .frontalRows]
             values.mismatchHintDE = "Präsentation: Person und Tafel müssen gemeinsam sichtbar sein (hohe Co-Präsenz)."
             values.captureGuidanceDE = "Schreibfläche dominant, Präsentierende:r darunter/davor; hohe Co-Präsenz Person–Tafel; Gesichter und Tafelinhalt lesbar."
-            values.researchAnchorDE = "TIMSS public board work / student presentation; IPN Zielorientierung und kognitive Aktivierung."
         },
         TeachingSituationPreset.make { values in
             values.id = .handsOnExperiment
@@ -121,7 +116,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.sparseSpread, .multiCluster]
             values.mismatchHintDE = "Experiment: verteilte Akteure im Handlungsraum zeigen - nicht nur leere Tafelwand."
             values.captureGuidanceDE = "Weiterer Ausschnitt auf Handlungsraum/Material; mehrere Akteure verteilt ok; Tafel sekundär."
-            values.researchAnchorDE = "IPN-Experimentierphasen; TIMSS experiment/lab activity script."
         },
         TeachingSituationPreset.make { values in
             values.id = .classroomManagementOverview
@@ -141,7 +135,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.wholeRoomDense, .multiCluster]
             values.mismatchHintDE = "Klassenführung: möglichst viele SuS im Überblick - ein enger Tafel-Close-up zeigt die Gruppe nicht."
             values.captureGuidanceDE = "Hoher Standpunkt oder weiter Winkel: möglichst viele SuS und Raumstruktur; Managementereignisse sichtbar."
-            values.researchAnchorDE = "Klassenführung / whole-room monitoring (TIMSS transition/organization; IPN Organisation)."
         },
         TeachingSituationPreset.make { values in
             values.id = .circleOrPlenumDiscussion
@@ -161,7 +154,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.circleLike, .multiCluster]
             values.mismatchHintDE = "Kreis/Plenum braucht mehrere Personen in der Interaktionszone - reine Tafelansicht reicht nicht."
             values.captureGuidanceDE = "Kreis oder Plenum im Mittelband: mehrere Personen, Tafel oft dezentral; offene Sitzordnung erfassen."
-            values.researchAnchorDE = "TIMSS discussion/plenum; IPN Sozialklima und partizipative Interaktion."
         },
         TeachingSituationPreset.make { values in
             values.id = .individualSeatwork
@@ -181,7 +173,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.seatworkScattered, .sparseSpread]
             values.mismatchHintDE = "Stillarbeit: verstreute Einzelakteure zeigen - nicht nur Tafel-Close-up oder enges Dialogpaar."
             values.captureGuidanceDE = "Weiterer Ausschnitt: mehrere Einzelarbeitsplätze sichtbar; Tafel optional am Rand."
-            values.researchAnchorDE = "TIMSS seatwork individual; IPN Organisation und kognitive Aktivierung in Arbeitsphasen."
         },
         TeachingSituationPreset.make { values in
             values.id = .teacherDemonstration
@@ -201,7 +192,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.presentationFocus, .frontalRows]
             values.mismatchHintDE = "Demonstration: Lehrperson und Schreibfläche gemeinsam - nicht leere Gruppe ohne Tafel."
             values.captureGuidanceDE = "Tafel dominant, Lehrperson davor/darunter; Tafelinhalt lesbar (Text/Struktur); vordere Reihen optional."
-            values.researchAnchorDE = "TIMSS public board work / whole-class modeling; IPN Zielklarheit und kognitive Aktivierung."
         },
         TeachingSituationPreset.make { values in
             values.id = .transitionOrganization
@@ -221,7 +211,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.wholeRoomDense, .sparseSpread]
             values.mismatchHintDE = "Übergänge brauchen Raumübersicht mit mehreren Akteuren - ein enger Tafelausschnitt zeigt den Übergangsraum nicht."
             values.captureGuidanceDE = "Weiter Winkel / höherer Standpunkt: Bewegung und Organisationsgeschehen im ganzen Raum."
-            values.researchAnchorDE = "TIMSS transition/organization; IPN Klassenführung in Übergangsphasen."
         },
         TeachingSituationPreset.make { values in
             values.id = .formativeAssessmentDialogue
@@ -241,7 +230,6 @@ public enum TeachingSituationCatalogue {
             values.preferredLayouts = [.dyadClose, .frontalRows]
             values.mismatchHintDE = "Feedback-Dialog: Gesichter und Interaktion zentrieren - nicht leere Raumübersicht."
             values.captureGuidanceDE = "Nah genug für lesbare Gesichter; Dialogpartner zentriert; Tafel als optionaler Kontext."
-            values.researchAnchorDE = "IPN Lernunterstützung und Fehlerkultur (Proxy); TIMSS recitation/dialogue for formative exchange."
         }
     ]
 

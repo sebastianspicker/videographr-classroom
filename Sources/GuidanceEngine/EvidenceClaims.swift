@@ -37,7 +37,7 @@ public enum EvidenceClaimRegistry {
             id: "audio-amplitude-boundary",
             sourceURL: "https://www.itu.int/rec/R-REC-BS.1770/en",
             construct: "Normalisierte Audioamplitude und Nähe zur digitalen Vollaussteuerung",
-            requiredObservable: "Normalisierte Spitzen- und RMS-Amplitude des lokalen Eingangssignals",
+            requiredObservable: "Normalisierte Spitzen- und mittlere Spitzenamplitude pro Frame des lokalen Eingangssignals",
             allowedWordingDE: "Der lokale Pegeltest beschreibt Signalstärke und die Nähe zur digitalen Vollaussteuerung; er misst weder True Peak noch Sprachverständlichkeit oder Aussetzerfreiheit.",
             prohibitedWordingDE: [
                 "clipping erkannt",

@@ -72,7 +72,7 @@ final class AppStore: ObservableObject {
     var recordingArtifacts: any RecordingArtifactSecuring { store }
     let readiness = ReadinessAggregator()
 
-    let asyncStore: any SessionRepository
+    let asyncStore: SessionStoreAsync
     let mediaInspector = MediaInspector()
     let packageWriter = StudyPackageWriter()
     var autosaveTask: Task<Void, Never>?

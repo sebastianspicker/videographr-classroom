@@ -55,14 +55,27 @@ public struct CaptureObservabilityAssessment: Equatable, Sendable {
         orientation: OrientationSample,
         frame: FrameMetrics,
         cv: CVFeatures,
-        motion: MotionMetrics
+        motion: MotionMetrics,
+        config: GuidanceConfig
     ) -> CaptureObservabilityAssessment {
         let cvUnavailable = !cv.analysisSucceeded
-        let levelError = min(1, abs(orientation.rollDegrees) / 12)
-        let level = thresholdStatus(value: levelError, passMaximum: 0.25, warnMaximum: 0.6)
+        // Limits mirror the tip thresholds so a dimension fails exactly when a critical tip fires.
+        let roll = abs(orientation.rollDegrees)
+        let levelError = min(1, roll / config.rollCriticalDegrees)
+        let level: CaptureObservabilityDimension.Status =
+            roll > config.rollCriticalDegrees ? .fail : (roll > config.rollWarningDegrees ? .warn : .pass)
         let exposure = max(frame.clippedHighlightFraction, frame.clippedShadowFraction, frame.backlightScore)
-        let exposureStatus = thresholdStatus(value: exposure, passMaximum: 0.12, warnMaximum: 0.28)
-        let stable = motion.isStable && motion.smoothedAngularSpeed <= 12
+        // Clipping has only warning-level tips (shadow clipping has none), so it never fails.
+        let exposureStatus: CaptureObservabilityDimension.Status
+        if frame.backlightScore >= config.backlightCriticalScore {
+            exposureStatus = .fail
+        } else if frame.backlightScore >= config.backlightWarningScore
+            || max(frame.clippedHighlightFraction, frame.clippedShadowFraction) > config.maxHighlightClipFraction {
+            exposureStatus = .warn
+        } else {
+            exposureStatus = .pass
+        }
+        let stable = motion.isStable && motion.smoothedAngularSpeed <= config.maxSmoothedAngularSpeed
 
         return CaptureObservabilityAssessment(dimensions: [
             dimension((
@@ -148,15 +161,6 @@ public struct CaptureObservabilityAssessment: Equatable, Sendable {
     ) -> CaptureObservabilityDimension.Status {
         if value >= passMinimum { return .pass }
         return value >= warnMinimum ? .warn : .fail
-    }
-
-    private static func thresholdStatus(
-        value: Double,
-        passMaximum: Double,
-        warnMaximum: Double
-    ) -> CaptureObservabilityDimension.Status {
-        if value <= passMaximum { return .pass }
-        return value <= warnMaximum ? .warn : .fail
     }
 }
 

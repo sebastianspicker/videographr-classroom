@@ -101,32 +101,3 @@ public enum ClassroomLayoutPattern: String, Codable, CaseIterable, Sendable, Ide
         }
     }
 }
-
-/// A visible, unvalidated recommendation emitted only by the research engine.
-public struct ExperimentalResearchTip: Equatable, Identifiable, Sendable {
-    public enum Category: String, Sendable {
-        case teachingScene
-    }
-
-    public typealias Values = (
-        id: String,
-        category: Category,
-        severity: GuidanceSeverity,
-        message: String,
-        actionHint: String
-    )
-
-    public var id: String
-    public var category: Category
-    public var severity: GuidanceSeverity
-    public var message: String
-    public var actionHint: String
-
-    public init(_ values: Values) {
-        id = values.id
-        category = values.category
-        severity = values.severity
-        message = values.message
-        actionHint = values.actionHint
-    }
-}

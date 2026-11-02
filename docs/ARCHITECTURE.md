@@ -32,7 +32,7 @@ app does not control what the selected provider does next.
 | Target | Responsibility | Dependencies |
 | --- | --- | --- |
 | `GuidanceEngine` | Pure direct observability: frame, CV, orientation, motion, audio level metering, availability, filming-tip prioritisation, and evidence-safe wording | None |
-| `SessionCore` | Durable session model and persisted formats. `Domain`: value types, consent, transitions, codecs (`SessionCoding`), runtime facts copied into take manifests. `Application`: readiness, recording admission, the recording state machine, the repository protocol. `Persistence`: `SessionStore`, journals, reconciliation, study-package writing, leases and directory checks (`StudyPackageWriter`, `StudyPackageDirectory`) | `GuidanceEngine` |
+| `SessionCore` | Durable session model and persisted formats. `Domain`: value types, consent, transitions, codecs (`SessionCoding`), runtime facts copied into take manifests. `Application`: readiness, recording admission, the recording state machine. `Persistence`: `SessionStore`, journals, reconciliation, study-package writing, leases and directory checks (`StudyPackageWriter`, `StudyPackageDirectory`) | `GuidanceEngine` |
 | `ExperimentalResearch` | Explicitly unvalidated scene, coding, and rule-hypothesis algorithms, the live `ExperimentalAnalysisSession`, research-report adapters, and Gaussian geometry | `GuidanceEngine`, `SessionCore` |
 | `LearnContent` | Independent German method, technology, and external-device catalogue | None |
 
@@ -115,8 +115,7 @@ fact changes durable artifact ownership and must be processed in order.
 flowchart LR
     Setup["Setup and consent"] --> AppStore["AppStore"]
     Reflect["Reflect and export"] --> AppStore
-    AppStore --> Repository["SessionRepository"]
-    Repository --> SessionStore["SessionStore"]
+    AppStore --> SessionStore["SessionStore"]
     SessionStore --> Local["Application Support sessions"]
 
     Devices["Camera, audio, motion"] --> Controller["CaptureSessionController"]

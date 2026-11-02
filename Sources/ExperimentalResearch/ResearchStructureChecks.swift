@@ -10,9 +10,14 @@ struct ResearchStructureContext {
     let preset: TeachingSituationPreset
     let config: GuidanceConfig
 
-    init(cv: CVFeatures, scene: TeachingSceneAssessment, situation: TeachingSituationID) {
+    init(
+        cv: CVFeatures,
+        scene: TeachingSceneAssessment,
+        situation: TeachingSituationID,
+        signals: ExperimentalCaptureSignals
+    ) {
         self.cv = cv
-        signals = ExperimentalCaptureSignals(cv: cv)
+        self.signals = signals
         self.scene = scene
         self.situation = situation
         preset = TeachingSituationCatalogue.preset(for: situation)
@@ -70,7 +75,7 @@ extension ResearchStructureAssessor {
                 labelDE: "Tafel-Text / Zielsichtbarkeit",
                 ok: boardTextPasses(context, bar: textBar),
                 score: max(context.boardTextDensity, context.board * 0.5),
-                detailDE: "Text-Dichte \(pct(context.boardTextDensity)) (Bar \(pct(textBar)))."
+                detailDE: "Text-Dichte \(percentText(context.boardTextDensity)) (Bar \(percentText(textBar)))."
             ))
         ]
     }
@@ -81,9 +86,9 @@ extension ResearchStructureAssessor {
         passes: Bool
     ) -> String {
         if passes {
-            return "Tafel/Board brauchbar (\(pct(context.board)); Text \(pct(context.boardTextDensity)); secondary \(pct(context.secondaryWritingSupport)))."
+            return "Tafel/Board brauchbar (\(percentText(context.board)); Text \(percentText(context.boardTextDensity)); secondary \(percentText(context.secondaryWritingSupport)))."
         }
-        return "Schreibfläche schwach (\(pct(context.board)) < \(pct(bar))) - für „\(context.preset.titleDE)“ erforderlich."
+        return "Schreibfläche schwach (\(percentText(context.board)) < \(percentText(bar))) - für „\(context.preset.titleDE)“ erforderlich."
     }
 
     private static func boardTextPasses(_ context: ResearchStructureContext, bar: Double) -> Bool {
@@ -97,7 +102,7 @@ extension ResearchStructureAssessor {
                 labelDE: "Schreibfläche (optional)",
                 ok: true,
                 score: max(context.board, 0.5),
-                detailDE: "Für diese Situation optional (Score \(pct(context.board)))."
+                detailDE: "Für diese Situation optional (Score \(percentText(context.board)))."
             )),
             ResearchStructureCheck((
                 id: "boardText",
@@ -135,7 +140,7 @@ extension ResearchStructureAssessor {
             labelDE: "Räumliche Nutzbarkeit",
             ok: (useful && centered) || context.preset.minPeople == 0,
             score: context.spatialUsefulness,
-            detailDE: "Nutzbarkeit \(pct(context.spatialUsefulness)), Mittelband \(pct(context.midBandOccupancy)), Dichte \(pct(context.interactionDensity))."
+            detailDE: "Nutzbarkeit \(percentText(context.spatialUsefulness)), Mittelband \(percentText(context.midBandOccupancy)), Dichte \(percentText(context.interactionDensity))."
         ))
     }
 
@@ -156,9 +161,9 @@ extension ResearchStructureAssessor {
         needed: Bool,
         passes: Bool
     ) -> String {
-        guard needed else { return "Co-Präsenz \(pct(context.coPresence)) (niedrige Gewichtung)." }
-        if passes { return "Co-Präsenz \(pct(context.coPresence))." }
-        return "Co-Präsenz zu schwach (\(pct(context.coPresence)) < \(pct(context.preset.minResearchCoPresence)))."
+        guard needed else { return "Co-Präsenz \(percentText(context.coPresence)) (niedrige Gewichtung)." }
+        if passes { return "Co-Präsenz \(percentText(context.coPresence))." }
+        return "Co-Präsenz zu schwach (\(percentText(context.coPresence)) < \(percentText(context.preset.minResearchCoPresence)))."
     }
 
     private static func layoutCheck(_ context: ResearchStructureContext) -> ResearchStructureCheck {
@@ -169,7 +174,7 @@ extension ResearchStructureAssessor {
             labelDE: "Layout-Struktur",
             ok: passes,
             score: context.layoutFit,
-            detailDE: "Layout \(context.signals.layoutPattern.titleDE) · Fit \(pct(context.layoutFit)) (Bar \(pct(bar)))."
+            detailDE: "Layout \(context.signals.layoutPattern.titleDE) · Fit \(percentText(context.layoutFit)) (Bar \(percentText(bar)))."
         ))
     }
 
@@ -189,7 +194,7 @@ extension ResearchStructureAssessor {
             labelDE: "Beobachtungsstabilität",
             ok: context.stability >= 0.35,
             score: context.stability,
-            detailDE: "Stabilität \(pct(context.stability))."
+            detailDE: "Stabilität \(percentText(context.stability))."
         ))
     }
 
@@ -200,7 +205,7 @@ extension ResearchStructureAssessor {
             labelDE: "Interaktionsdichte",
             ok: bar <= 0.05 || context.interactionDensity >= bar * 0.85,
             score: context.interactionDensity,
-            detailDE: "Interaktionsdichte \(pct(context.interactionDensity)) (Bar \(pct(bar)))."
+            detailDE: "Interaktionsdichte \(percentText(context.interactionDensity)) (Bar \(percentText(bar)))."
         ))
     }
 

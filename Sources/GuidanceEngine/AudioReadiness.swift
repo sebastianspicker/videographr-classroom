@@ -1,6 +1,6 @@
 import Foundation
 
-/// Instantaneous / short-window audio metrics (0...1 normalized peak/RMS proxies).
+/// Instantaneous / short-window audio metrics (0...1 normalized peak and mean per-frame peak amplitude).
 public struct AudioLevelSample: Equatable, Sendable {
     public struct Values: Sendable {
         public var peakLevel = 0.0
@@ -235,7 +235,15 @@ public struct AudioReadinessEvaluator: Sendable {
 
     public static let `default` = AudioReadinessEvaluator()
 
-    public func evaluate(_ sample: AudioLevelSample) -> AudioGuidance {
+    /// Seconds after which a measured sample counts as stale (no new audio buffer).
+    static let staleAfterSeconds: TimeInterval = 2
+
+    public func evaluate(_ sample: AudioLevelSample, at now: Date = Date()) -> AudioGuidance {
+        // A sample with channel/sample-rate data came from a real buffer; default samples have neither.
+        let isMeasured = sample.channelCount != nil || sample.sampleRate != nil
+        if isMeasured, now.timeIntervalSince(sample.timestamp) > Self.staleAfterSeconds {
+            return AudioGuidance(status: .dropout, message: "Seit über 2 s kein neuer Audiopuffer.", actionHint: "Audioroute und Kabel prüfen; eine kurze Aufnahme abhören.", isReady: false)
+        }
         if sample.dropoutDetected {
             return AudioGuidance(status: .dropout, message: "Zeitstempel-Lücke im Audiosignal erkannt.", actionHint: "Audioroute und Kabel prüfen; eine kurze Aufnahme abhören.", isReady: false)
         }

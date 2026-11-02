@@ -218,19 +218,6 @@ public struct CaptureSession: Codable, Equatable, Identifiable, Sendable {
         if takeManifests.isEmpty { buildProvenance = draft.buildProvenance }
     }
 
-    /// Creates the v2 representation of legacy media without granting any legacy consent.
-    public mutating func migrateLegacyDataIfNeeded() {
-        guard schemaVersion < SessionSchema.currentVersion else { return }
-        if mediaAssets.isEmpty, let recordingRelativePath {
-            var values = SessionMediaAsset.Values()
-            values.role = .ownRecorded
-            values.relativePath = recordingRelativePath
-            mediaAssets = [SessionMediaAsset(values)]
-        }
-        schemaVersion = SessionSchema.currentVersion
-        updatedAt = Date()
-    }
-
     // Backward-compatible decode: sessions saved before teachingSituation / coding snapshots.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -266,7 +253,7 @@ public struct CaptureSession: Codable, Equatable, Identifiable, Sendable {
         retentionPolicy = try c.decodeIfPresent(RetentionPolicy.self, forKey: .retentionPolicy) ?? RetentionPolicy()
         exportEvents = try c.decodeIfPresent([ExportEvent].self, forKey: .exportEvents) ?? []
         buildProvenance = try c.decodeIfPresent(BuildProvenance.self, forKey: .buildProvenance)
-        // Decoding remains non-mutating; `SessionStore.migrateLegacySession` atomically persists this upgrade.
+        // Decoding remains non-mutating; legacy media is synthesized in memory and persisted by the next save.
         if decodedVersion < SessionSchema.currentVersion,
            mediaAssets.isEmpty,
            let recordingRelativePath

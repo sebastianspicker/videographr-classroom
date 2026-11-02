@@ -62,8 +62,8 @@ public struct MotionStabilityTracker: Sendable {
             )
         }
         let dPitch = abs(orientation.pitchDegrees - prev.pitchDegrees)
-        let dRoll = abs(orientation.rollDegrees - prev.rollDegrees)
-        let dYaw = abs(orientation.yawDegrees - prev.yawDegrees)
+        let dRoll = angleDifference(orientation.rollDegrees, prev.rollDegrees)
+        let dYaw = angleDifference(orientation.yawDegrees, prev.yawDegrees)
         let speed = (dPitch + dRoll + dYaw) / dt
         smoothed = smoothingAlpha * speed + (1 - smoothingAlpha) * smoothed
         return MotionMetrics(
@@ -81,8 +81,14 @@ public struct MotionStabilityTracker: Sendable {
     ) -> Double {
         guard deltaSeconds > 0 else { return 0 }
         let d = abs(b.pitchDegrees - a.pitchDegrees)
-            + abs(b.rollDegrees - a.rollDegrees)
-            + abs(b.yawDegrees - a.yawDegrees)
+            + angleDifference(b.rollDegrees, a.rollDegrees)
+            + angleDifference(b.yawDegrees, a.yawDegrees)
         return d / deltaSeconds
     }
+}
+
+/// Smallest absolute difference between two angles in degrees (wrap-aware).
+private func angleDifference(_ a: Double, _ b: Double) -> Double {
+    let raw = abs(a - b).truncatingRemainder(dividingBy: 360)
+    return min(raw, 360 - raw)
 }

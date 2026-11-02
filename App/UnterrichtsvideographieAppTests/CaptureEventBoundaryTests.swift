@@ -297,6 +297,91 @@ final class CaptureEventBoundaryTests: XCTestCase {
         XCTAssertTrue(merged.dropoutDetected)
     }
 
+    /// A transient resign-active (Control Center, alerts, Siri) only covers the preview.
+    @MainActor
+    func testResignActiveDuringATakeShowsThePrivacyCoverWithoutStoppingIt() {
+        let store = makeLiveStore()
+        let active = transaction(generation: 3)
+        store.liveIsActive = true
+        store.activeRecordingTransaction = active
+        store.isRecording = true
+        store.capture.recording = CaptureSessionController.Recording(
+            transaction: active,
+            artifacts: SessionStore(rootDirectory: temporaryDirectory),
+            temporaryURL: temporaryDirectory.appendingPathComponent("staging.mov"),
+            destinationURL: temporaryDirectory.appendingPathComponent("recording.mov"),
+            didStart: false,
+            stopRequested: false,
+            finalizing: false
+        )
+        var stopEvents = 0
+        store.capture.transactionEventSink = { event in
+            if case .recordingStopRequested = event { stopEvents += 1 }
+        }
+
+        NotificationCenter.default.post(name: UIApplication.willResignActiveNotification, object: nil)
+        let mainDrained = expectation(description: "main queue drained")
+        DispatchQueue.main.async { mainDrained.fulfill() }
+        wait(for: [mainDrained], timeout: 1)
+        let sessionQueueDrained = expectation(description: "session queue drained")
+        store.capture.sessionQueue.async { sessionQueueDrained.fulfill() }
+        wait(for: [sessionQueueDrained], timeout: 1)
+
+        XCTAssertFalse(store.appIsActive)
+        XCTAssertTrue(store.privacyCoverIsVisible)
+        XCTAssertTrue(store.isRecording)
+        XCTAssertTrue(store.liveIsActive)
+        XCTAssertEqual(store.activeRecordingTransaction, active)
+        XCTAssertEqual(store.capture.recording?.stopRequested, false)
+        XCTAssertEqual(stopEvents, 0)
+    }
+
+    @MainActor
+    func testKeptUnverifiedRecordingCompletesTheTakeWithoutRollback() {
+        let store = makeLiveStore()
+        let active = transaction(generation: 5)
+        store.activeRecordingTransaction = active
+        store.isFinalizingRecording = true
+        var rollbackEvents = 0
+        store.capture.transactionEventSink = { event in
+            if case .recordingRollbackCompleted = event { rollbackEvents += 1 }
+        }
+
+        store.handleTransactionEvent(.recordingKeptUnverified(active, "synthetic policy failure"))
+        let sessionQueueDrained = expectation(description: "session queue drained")
+        store.capture.sessionQueue.async { sessionQueueDrained.fulfill() }
+        wait(for: [sessionQueueDrained], timeout: 1)
+
+        XCTAssertNil(store.activeRecordingTransaction)
+        XCTAssertFalse(store.isFinalizingRecording)
+        XCTAssertFalse(store.isRecording)
+        XCTAssertEqual(store.recordStatusMessage, LiveStore.keptRecordingStatus)
+        XCTAssertEqual(rollbackEvents, 0)
+    }
+
+    /// A late attachment after the watchdog fired replaces its "not confirmed" status.
+    @MainActor
+    func testDeferredSuccessfulAttachmentReportsTheSavedTake() {
+        let store = makeLiveStore()
+        let deferred = transaction(generation: 8)
+        let url = temporaryDirectory.appendingPathComponent("recording.mov")
+        store.deferredArtifactTransactions[deferred] = ()
+        store.recordStatusMessage = "Finalisierung nicht bestätigt. Lokale Aufnahme wird beim nächsten App-Start geprüft."
+
+        store.resolveDeferredFinishedRecording(deferred, url: url, outcome: .attached)
+
+        XCTAssertNil(store.deferredArtifactTransactions[deferred])
+        XCTAssertEqual(store.recordStatusMessage, "Aufnahme gespeichert")
+
+        // A newer take owns the status line; the late success must not overwrite it.
+        let older = transaction(generation: 9)
+        store.deferredArtifactTransactions[older] = ()
+        store.activeRecordingTransaction = transaction(generation: 10)
+        store.recordStatusMessage = "Kontinuierliche Aufnahme läuft"
+        store.resolveDeferredFinishedRecording(older, url: url, outcome: .attached)
+        XCTAssertEqual(store.recordStatusMessage, "Kontinuierliche Aufnahme läuft")
+    }
+
     @MainActor
     private func makeLiveStore() -> LiveStore {
         LiveStore(appStore: AppStore(
@@ -461,5 +546,87 @@ final class InterruptedTakeRecoveryAppTests: XCTestCase {
         XCTAssertEqual(appStore.session.takeManifests.first?.effectiveLifecycleState, .failed)
         let remaining = await appStore.pendingInterruptedTakeIDs()
         XCTAssertTrue(remaining.isEmpty)
+    }
+
+    /// Only a refused frozen consent fails a written take; any other failure keeps its media.
+    func testAttachmentKeepsMediaOnNonConsentFailureAndFailsOnlyOnRefusedConsent() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AttachmentOutcome-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let store = SessionStore(rootDirectory: root)
+        let appStore = AppStore(store: store, bootstrapMode: .deferred)
+        await appStore.bootstrap()
+        XCTAssertEqual(appStore.bootstrapState, .ready)
+        let runtimeStatus = CaptureRuntimeStatus(audioRoute: "Test")
+
+        // The canonical file is no playable movie: inspection fails, consent is still valid.
+        let kept = try Self.recordingTake(in: store, consentStillGranted: true)
+        appStore.recordingTransactionsOfThisLaunch.insert(kept.transaction.transactionID)
+        let keptOutcome = await appStore.attachRecording(
+            for: kept.transaction, finalizedURL: kept.canonicalURL, runtimeStatus: runtimeStatus
+        )
+        XCTAssertEqual(keptOutcome, .kept)
+        let staged = try store.interruptedTakeURL(
+            sessionID: kept.transaction.sessionID, transactionID: kept.transaction.transactionID
+        )
+        let keptMediaExists = staged.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
+            || FileManager.default.fileExists(atPath: kept.canonicalURL.path)
+        XCTAssertTrue(keptMediaExists)
+        let keptSession = try XCTUnwrap(try store.load(id: kept.transaction.sessionID))
+        XCTAssertEqual(keptSession.takeManifests.first?.effectiveLifecycleState, .completionUnknown)
+        XCTAssertEqual(appStore.interruptedTakeCandidateIDs(in: keptSession), [kept.transaction.transactionID])
+
+        // The frozen grant is gone: the take fails and LiveStore rolls its media back.
+        let refused = try Self.recordingTake(in: store, consentStillGranted: false)
+        let refusedOutcome = await appStore.attachRecording(
+            for: refused.transaction, finalizedURL: refused.canonicalURL, runtimeStatus: runtimeStatus
+        )
+        XCTAssertEqual(refusedOutcome, .refused)
+        let refusedSession = try XCTUnwrap(try store.load(id: refused.transaction.sessionID))
+        XCTAssertEqual(refusedSession.takeManifests.first?.effectiveLifecycleState, .failed)
+    }
+
+    /// Saves a recording take with a frozen consent snapshot and writes a non-movie file at its
+    /// canonical URL inside the test's store root.
+    private static func recordingTake(
+        in store: SessionStore,
+        consentStillGranted: Bool
+    ) throws -> (transaction: RecordingTransaction, canonicalURL: URL) {
+        var grantValues = ConsentGrant.Values()
+        grantValues.scopes = [.collection, .localReflection]
+        grantValues.documentIdentifier = "local-test"
+        grantValues.documentVersion = "1"
+        grantValues.participantGroupPseudonym = "test-group"
+        grantValues.expiresAt = Date().addingTimeInterval(3_600)
+        var sessionValues = CaptureSession.Values()
+        sessionValues.consentGrants = [ConsentGrant(grantValues)]
+        var session = CaptureSession(sessionValues)
+        let authorization = try XCTUnwrap(session.captureAuthorizationSnapshot(at: Date()))
+        let transactionID = UUID()
+        var assetValues = SessionMediaAsset.Values()
+        assetValues.role = .ownRecorded
+        assetValues.relativePath = "\(session.id.uuidString).mp4"
+        let asset = SessionMediaAsset(assetValues)
+        var manifestValues = CaptureTakeManifest.Values()
+        manifestValues.id = transactionID
+        manifestValues.sessionID = session.id
+        manifestValues.mediaAssetID = asset.id
+        manifestValues.lifecycleState = .prepared
+        manifestValues.authorization = authorization
+        XCTAssertTrue(RecordingStateMachine.prepare(PreparedRecordingMutation(
+            transactionID: transactionID,
+            asset: asset,
+            decision: CaptureDecision(),
+            manifest: CaptureTakeManifest(manifestValues),
+            provenance: BuildProvenanceFactory.capture(for: .evidenceSafe),
+            preparedAt: Date()
+        ), in: &session))
+        XCTAssertTrue(RecordingStateMachine.began(transactionID: transactionID, in: &session, at: Date()))
+        if !consentStillGranted { session.consentGrants = [] }
+        try store.save(session)
+        let canonicalURL = try store.prepareRecordingURL(for: session)
+        try Data("synthetic unplayable take".utf8).write(to: canonicalURL)
+        return (RecordingTransaction(sessionID: session.id, transactionID: transactionID, generation: 1), canonicalURL)
     }
 }

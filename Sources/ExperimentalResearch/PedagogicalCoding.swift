@@ -245,43 +245,6 @@ public struct PedagogicalCodingResult: Equatable, Sendable {
         layoutPattern = values.context.layoutPattern
         analysisFocus = values.context.analysisFocus
     }
-    public var ipnCodes: [String] { ipnDimensions.map(\.code) }
-    public var timssCodes: [String] { timssActivities.map(\.code) }
-    public var gtiCodes: [String] { gtiDimensions.map(\.code) }
-    /// Top-k TIMSS activities by level (script alternatives for research review).
-    public func topTIMSS(k: Int = 3) -> [PedagogicalCodeAssignment] {
-        Array(timssActivities.sorted(by: stablePedagogicalAssignmentOrder).prefix(max(1, k)))
-    }
-    /// Top-k GTI facets by level.
-    public func topGTI(k: Int = 3) -> [PedagogicalCodeAssignment] {
-        Array(gtiDimensions.sorted(by: stablePedagogicalAssignmentOrder).prefix(max(1, k)))
-    }
-    /// Balance across GTI domains 0...1 (1 = equal domain means; low = one domain dominates).
-    public var gtiDomainBalance: Double {
-        let d = gtiDomainLevels
-        let vals = ["classroomManagement", "socialEmotionalSupport", "instruction"].compactMap { d[$0] }
-        guard vals.count >= 2 else { return 0 }
-        let mean = vals.reduce(0, +) / Double(vals.count)
-        guard mean > 1e-6 else { return 0 }
-        let variance = vals.reduce(0.0) { $0 + ($1 - mean) * ($1 - mean) } / Double(vals.count)
-        return min(1, max(0, 1.0 - sqrt(variance) / mean))
-    }
-    /// Whether primary TIMSS is among preset expected activities.
-    public var primaryTIMSSMatchesPresetExpectation: Bool {
-        let expected = TeachingSituationCatalogue.preset(for: teachingSituation).expectedTIMSSActivities
-        return expected.contains(primaryTIMSS.rawValue) || primaryTIMSS == .unclearOrNonInstructional
-    }
-    /// Domain rollups for GTI (management / social-emotional / instruction).
-    public var gtiDomainLevels: [String: Double] {
-        var sums: [String: (s: Double, n: Int)] = [:]
-        for d in gtiDimensions {
-            guard let code = GTIQualityCode(rawValue: d.code) else { continue }
-            let key = code.domain
-            let cur = sums[key] ?? (0, 0)
-            sums[key] = (cur.s + d.level, cur.n + 1)
-        }
-        return Dictionary(uniqueKeysWithValues: sums.map { ($0.key, $0.value.n > 0 ? $0.value.s / Double($0.value.n) : 0) })
-    }
     public static func empty(
         situation: TeachingSituationID = .frontalBoardInstruction,
         scene: TeachingSceneType = .emptyOrUnusable

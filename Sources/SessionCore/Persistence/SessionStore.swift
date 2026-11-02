@@ -337,31 +337,4 @@ public final class SessionStore: @unchecked Sendable {
         }
     }
 
-    /// Test-only seam for deterministic post-write policy failure coverage.
-    internal convenience init(
-        rootDirectory: URL,
-        policyVerificationHook: @escaping (URL) throws -> Void
-    ) {
-        self.init(rootDirectory: rootDirectory)
-        self.policyVerificationHook = policyVerificationHook
-    }
-
-    /// Test-only seam for verifying that imports read one opened source handle.
-    internal convenience init(
-        rootDirectory: URL,
-        importSourceOpenedHook: @escaping () throws -> Void
-    ) {
-        self.init(rootDirectory: rootDirectory)
-        self.importSourceOpenedHook = importSourceOpenedHook
-    }
-
-    /// Test-only seam for rollback coverage at durable persistence boundaries.
-    internal convenience init(
-        rootDirectory: URL,
-        persistenceFaultHook: @escaping (PersistenceFaultPoint) throws -> Void
-    ) {
-        self.init(rootDirectory: rootDirectory)
-        self.persistenceFaultHook = persistenceFaultHook
-    }
-
 }

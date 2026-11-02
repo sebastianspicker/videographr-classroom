@@ -109,7 +109,7 @@ public struct ResearchCaptureReport: Equatable, Codable, Sendable, Identifiable 
         let meanTIMSS = meanLevels(snapshots.map(\.timss))
 
         let situationTitle = TeachingSituationCatalogue.preset(for: input.teachingSituation).titleDE
-        let summary = "Report (\(snapshots.count) Snapshots): Situation \u{201E}\(situationTitle)\u{201C} · Szene \(aggregate.scene) · Layout \(aggregate.layout) · TIMSS \(aggregate.timss) · GTI \(aggregate.gti) · Match \(Int((aggregate.meanMatch * 100).rounded())) %."
+        let summary = "Report (\(snapshots.count) Snapshots): Situation \u{201E}\(situationTitle)\u{201C} · Szene \(aggregate.scene) · Layout \(aggregate.layout) · TIMSS \(aggregate.timss) · GTI \(aggregate.gti) · Match \(percentText(aggregate.meanMatch))."
 
         var values = Values(captureProvenance: captureProvenance, generatorProvenance: generatorProvenance)
         values.id = input.id
@@ -190,20 +190,20 @@ public enum CodingInformedReflection: Sendable {
         let preset = TeachingSituationCatalogue.preset(for: situation)
         let topIPN = coding.ipnDimensions.sorted(by: stableAssignmentOrder).prefix(3)
         let topGTI = coding.gtiDimensions.sorted(by: stableAssignmentOrder).prefix(2)
-        let ipnLine = topIPN.map { "\($0.labelDE) (\(pct($0.level)))" }.joined(separator: "; ")
-        let gtiLine = topGTI.map { "\($0.labelDE) (\(pct($0.level)))" }.joined(separator: "; ")
+        let ipnLine = topIPN.map { "\($0.labelDE) (\(percentText($0.level)))" }.joined(separator: "; ")
+        let gtiLine = topGTI.map { "\($0.labelDE) (\(percentText($0.level)))" }.joined(separator: "; ")
 
         return [
             lessonGoalsKey: """
-            Capture-Kontext: Situation \u{201E}\(preset.titleDE)\u{201C}. Szene \(scene.sceneType.titleDE) (Match \(pct(scene.presetMatchScore))). \
+            Capture-Kontext: Situation \u{201E}\(preset.titleDE)\u{201C}. Szene \(scene.sceneType.titleDE) (Match \(percentText(scene.presetMatchScore))). \
             TIMSS-Aktivität (Software): \(coding.primaryTIMSS.titleDE). \
             IPN-Zielklarheit-Proxy: \(level(of: IPNDimensionCode.goalOrientation.rawValue, in: coding.ipnDimensions)). \
             GTI fachliche Klarheit: \(level(of: GTIQualityCode.subjectClarity.rawValue, in: coding.gtiDimensions)). \
             Belege Lernziele am Video - Codes sind Strukturproxies, keine Validierung.
             """,
             studentLearningEvidenceKey: """
-            Struktur-Signale: Personen-Nutzbarkeit \(pct(scene.peopleSignal)), Mittelband/Layout \(scene.layoutPattern.titleDE), \
-            Co-Präsenz \(pct(scene.coPresenceSignal)). \
+            Struktur-Signale: Personen-Nutzbarkeit \(percentText(scene.peopleSignal)), Mittelband/Layout \(scene.layoutPattern.titleDE), \
+            Co-Präsenz \(percentText(scene.coPresenceSignal)). \
             GTI Engagement-Proxy: \(level(of: GTIQualityCode.studentEngagementProxy.rawValue, in: coding.gtiDimensions)). \
             Welche SuS-Äußerungen/Handlungen im Video stützen oder widerlegen die Software-Hypothese?
             """,
@@ -216,14 +216,14 @@ public enum CodingInformedReflection: Sendable {
             alternativesKey: """
             Preset-Hinweis: \(preset.mismatchHintDE) \
             Capture-Guidance: \(preset.captureGuidanceDE) \
-            Wenn Match schwach (\(pct(scene.presetMatchScore))): welche alternative Kameraposition oder Unterrichtsphase würde die Analyseziele besser tragen?
+            Wenn Match schwach (\(percentText(scene.presetMatchScore))): welche alternative Kameraposition oder Unterrichtsphase würde die Analyseziele besser tragen?
             """
         ]
     }
 
     private static func level(of code: String, in rows: [PedagogicalCodeAssignment]) -> String {
         guard let row = rows.first(where: { $0.code == code }) else { return "-" }
-        return pct(row.level)
+        return percentText(row.level)
     }
 
     private static func stableAssignmentOrder(
@@ -231,9 +231,5 @@ public enum CodingInformedReflection: Sendable {
         _ rhs: PedagogicalCodeAssignment
     ) -> Bool {
         lhs.level == rhs.level ? lhs.code < rhs.code : lhs.level > rhs.level
-    }
-
-    private static func pct(_ v: Double) -> String {
-        "\(Int((v * 100).rounded())) %"
     }
 }

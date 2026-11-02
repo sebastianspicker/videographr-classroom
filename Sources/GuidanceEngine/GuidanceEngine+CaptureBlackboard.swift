@@ -27,7 +27,7 @@ extension GuidanceEngine {
     private func boardCVNote(_ cv: CVFeatures, multiCue: Double) -> String {
         guard cv.analysisSucceeded else { return "" }
         guard cv.source == .vision || cv.source == .fixture else { return "" }
-        return " (CV multi-cue \(percent(multiCue)))"
+        return " (CV multi-cue \(percentText(multiCue)))"
     }
 
     private func boardQualityNeedsWarning(cv: CVFeatures, multiCue: Double) -> Bool {
@@ -42,7 +42,7 @@ extension GuidanceEngine {
             id: "board-low-quality",
             category: .blackboard,
             severity: .info,
-            message: "Schreibfläche schwach abgesichert (Multi-Cue \(percent(multiCue))) - Geometrie/Kanten unsicher.",
+            message: "Schreibfläche schwach abgesichert (Multi-Cue \(percentText(multiCue))) - Geometrie/Kanten unsicher.",
             actionHint: "Tafel vollständiger ins Bild holen (breitere Fläche, klare Kanten); seitlich-frontal statt extrem schräg."
         ))
     }
@@ -145,7 +145,7 @@ extension GuidanceEngine {
             id: "people-off-zone",
             category: .people,
             severity: .warning,
-            message: "Personen außerhalb der Lehr-Lern-Zone (räumliche Nutzbarkeit \(percent(spatial)), Mittelband \(percent(cv.personMidBandOccupancy))).",
+            message: "Personen außerhalb der Lehr-Lern-Zone (räumliche Nutzbarkeit \(percentText(spatial)), Mittelband \(percentText(cv.personMidBandOccupancy))).",
             actionHint: "Ausschnitt so wählen, dass Lehrperson und Lerngruppe im mittleren Bildband unter der Tafel lesbar sind - nicht nur am Bildrand/Boden."
         ))]
     }
@@ -159,7 +159,7 @@ extension GuidanceEngine {
             id: "copresence-weak",
             category: .interaction,
             severity: .warning,
-            message: "Tafel und Personen kaum gemeinsam im Analyseausschnitt (Co-Präsenz \(percent(co))).",
+            message: "Tafel und Personen kaum gemeinsam im Analyseausschnitt (Co-Präsenz \(percentText(co))).",
             actionHint: "Seitlich-frontal so positionieren, dass Schreibfläche und Akteure gleichzeitig sichtbar sind."
         ))]
     }
@@ -170,7 +170,7 @@ extension GuidanceEngine {
             id: "cv-unstable",
             category: .motion,
             severity: .info,
-            message: "CV-Beobachtung unruhig (Stabilität \(percent(cv.observationStability))) - Hinweise können flackern.",
+            message: "CV-Beobachtung unruhig (Stabilität \(percentText(cv.observationStability))) - Hinweise können flackern.",
             actionHint: "Stativ ruhig halten; kurzen Moment warten, bis Tafel/Personen stabil erkannt werden (kontinuierliche Aufnahme nicht ständig reframen)."
         ))]
     }

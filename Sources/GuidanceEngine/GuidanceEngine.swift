@@ -14,7 +14,8 @@ public struct GuidanceEngine: Sendable {
             orientation: input.orientation,
             frame: input.frame,
             cv: input.cv,
-            motion: input.motion
+            motion: input.motion,
+            config: config
         )
         let tips = captureTips(input)
         var placementInput = PlacementAssessment.AssessmentInput(

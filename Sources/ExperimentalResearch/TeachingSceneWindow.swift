@@ -170,13 +170,9 @@ public struct TeachingSceneWindow: Equatable, Sendable {
 
     private func aggregateSummary(_ input: SummaryInput) -> String {
         if input.matches {
-            return "Zeitfenster (\(input.sampleCount)): Szene „\(input.scene.titleDE)“ stabil · Layout \(input.layout.titleDE) · Match \(pct(input.match))."
+            return "Zeitfenster (\(input.sampleCount)): Szene „\(input.scene.titleDE)“ stabil · Layout \(input.layout.titleDE) · Match \(percentText(input.match))."
         }
-        return "Zeitfenster (\(input.sampleCount)): Szene „\(input.scene.titleDE)“ · Match \(pct(input.match)) - Preset noch nicht stabil erfüllt."
-    }
-
-    private func pct(_ v: Double) -> String {
-        "\(Int((v * 100).rounded())) %"
+        return "Zeitfenster (\(input.sampleCount)): Szene „\(input.scene.titleDE)“ · Match \(percentText(input.match)) - Preset noch nicht stabil erfüllt."
     }
 
     /// Most frequent value, with the latest occurrence resolving an equal vote count.

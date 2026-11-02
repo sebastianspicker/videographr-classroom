@@ -13,7 +13,6 @@ struct PedagogicalCodingInput {
     let interaction: Double
     let layout: ClassroomLayoutPattern
     let layoutFit: Double
-    let spread: Double
     let clusteredness: Double
     let textDensity: Double
     let interactDensity: Double
@@ -38,7 +37,6 @@ struct PedagogicalCodingInput {
         )
         layout = signals.layoutPattern != .unknown ? signals.layoutPattern : scene.layoutPattern
         layoutFit = scene.layoutSignal
-        spread = cv.personHorizontalSpread
         clusteredness = cv.personClusteredness
         textDensity = cv.boardTextDensity
         interactDensity = signals.interactionDensity
@@ -60,7 +58,7 @@ func stablePedagogicalAssignmentOrder(
 
 public enum PedagogicalCoder: Sendable {
     public static func code(_ request: PedagogicalCodeInput) -> PedagogicalCodingResult {
-        let signals = ExperimentalCaptureSignals(cv: request.cv)
+        let signals = request.signals
         guard request.cv.analysisSucceeded else {
             return .empty(situation: request.teachingSituation, scene: request.scene.sceneType)
         }
@@ -75,7 +73,7 @@ public enum PedagogicalCoder: Sendable {
         let preset = TeachingSituationCatalogue.preset(for: request.teachingSituation)
         let input = PedagogicalCodingInput(signals: signals, scene: request.scene, frame: request.frame)
         let confidence = codingConfidence(
-            input: input, cv: request.cv, scene: request.scene, situation: request.teachingSituation
+            input: input, request: request
         )
         let ipn = codeIPN(input: input, preset: preset, focus: request.analysisFocus, confidence: confidence)
         let timss = codeTIMSS(input: input, preset: preset, confidence: confidence)
@@ -105,10 +103,9 @@ public enum PedagogicalCoder: Sendable {
 
 private func codingConfidence(
     input: PedagogicalCodingInput,
-    cv: CVFeatures,
-    scene: TeachingSceneAssessment,
-    situation: TeachingSituationID
+    request: PedagogicalCodeInput
 ) -> Double {
+    let scene = request.scene
     let richness = min(
         1,
         0.18 * input.board + 0.22 * input.people + 0.12 * input.co + 0.10 * input.stable
@@ -116,7 +113,9 @@ private func codingConfidence(
             + 0.06 * input.interactDensity + 0.04 * input.secondaryBoard
     )
     let match = min(1.0, max(0.30, 0.35 + 0.65 * scene.presetMatchScore))
-    let structure = ResearchStructureAssessor.assess(cv: cv, scene: scene, teachingSituation: situation)
+    let structure = ResearchStructureAssessor.assess(
+        cv: request.cv, scene: scene, teachingSituation: request.teachingSituation, signals: request.signals
+    )
     let factor = min(1.0, max(0.45, 0.55 + 0.45 * structure.score))
     return min(0.92, 0.35 + 0.55 * richness) * match * factor
 }

@@ -2,49 +2,6 @@ import Foundation
 import GuidanceEngine
 import SessionCore
 
-// MARK: - Preset research checklist
-
-public extension TeachingSituationPreset {
-    /// Actionable research-capture checklist for this teaching situation (setup / pre-roll).
-    var researchCaptureChecklistDE: [String] {
-        var items: [String] = []
-        if requiresBoard {
-            items.append("Schreibfläche multi-cue sichtbar (Bar ≥ \(pct(minResearchBoardScore))).")
-            if minResearchBoardTextDensity > 0.05 {
-                items.append("Tafel-Text/Zielsichtbarkeit (Text-Dichte ≥ \(pct(minResearchBoardTextDensity))).")
-            }
-            if coPresenceEmphasis >= 0.55 {
-                items.append("Person–Tafel Co-Präsenz (Bar ≥ \(pct(minResearchCoPresence))).")
-            }
-        } else {
-            items.append("Schreibfläche optional - Akteure und Interaktionsraum priorisieren.")
-        }
-        if minPeople > 0 {
-            items.append("Mindestens \(minPeople) Akteure im Bild.")
-        }
-        if prefersMultiPerson {
-            items.append("Mehrpersonen-Cluster / Raumübersicht (Interaktionsdichte ≥ \(pct(minResearchInteractionDensity))).")
-        } else if minPeople >= 2 {
-            items.append("Dialog-/Paar-Interaktion lesbar (Dichte ≥ \(pct(minResearchInteractionDensity))).")
-        }
-        if !preferredLayouts.isEmpty {
-            items.append("Layout: \(preferredLayouts.map(\.titleDE).joined(separator: " / ")) (Fit ≥ \(pct(minResearchLayoutFit))).")
-        }
-        items.append("Szene muss Preset „\(titleDE)“ matchen (nicht nur Platzierung/Gyro).")
-        items.append("Stativ- und CV-Beobachtungsstabilität für kontinuierlichen Take (Derry).")
-        return items
-    }
-
-    /// TIMSS-script family tag for comparative research documentation.
-    var timssScriptFamilyDE: String {
-        TeachingSituationCatalogue.family(for: id)
-    }
-
-    private func pct(_ v: Double) -> String {
-        "\(Int((v * 100).rounded())) %"
-    }
-}
-
 // MARK: - Scene transition detector
 
 /// Detects teaching-scene / layout / TIMSS-primary changes for continuous-take research logs.

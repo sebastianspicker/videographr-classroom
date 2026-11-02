@@ -48,8 +48,8 @@ extension GuidanceEngine {
             id: "composition-loose",
             category: .composition,
             severity: .warning,
-            message: "Bildausschnitt zu weit (viel leerer Rand). Interaktionsdetails erscheinen klein im Bild.",
-            actionHint: "Näher heran (1–2 m) oder optisch zoomen, bis die Interaktionszone den Rahmen füllt - ohne extreme Weitwinkel-Verzerrung."
+            message: "Randbereiche deutlich heller oder dunkler als mittlere Helligkeit.",
+            actionHint: "Bildausschnitt und Belichtung prüfen; bei Bedarf Abstand oder Zoom anpassen, bis die Interaktionszone den Rahmen füllt."
         ))]
     }
 
@@ -83,7 +83,7 @@ extension GuidanceEngine {
             id: "highlight-clip",
             category: .composition,
             severity: .warning,
-            message: "Viele überstrahlte Pixel (ca. \(percent(frame.clippedHighlightFraction))) - Fenster/Leuchten fressen Zeichnung.",
+            message: "Viele überstrahlte Pixel (ca. \(percentText(frame.clippedHighlightFraction))) - Fenster/Leuchten fressen Zeichnung.",
             actionHint: "Belichtung senken oder Standort so wählen, dass helle Flächen nicht dominieren."
         ))]
     }
@@ -94,7 +94,7 @@ extension GuidanceEngine {
             id: "low-contrast",
             category: .composition,
             severity: .info,
-            message: "Geringer Bildkontrast (ca. \(percent(frame.globalContrast))) - Tafel und Personen schwer trennbar.",
+            message: "Geringer Bildkontrast (ca. \(percentText(frame.globalContrast))) - Tafel und Personen schwer trennbar.",
             actionHint: "Belichtung/Standort prüfen; starkes Gegenlicht vermeiden."
         ))]
     }

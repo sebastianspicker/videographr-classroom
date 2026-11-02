@@ -91,6 +91,23 @@ extension AppStore {
         return (try? await asyncStore.validatedMediaURL(for: asset, sessionID: session.id)) != nil
     }
 
+    /// A take of this launch whose written media could not be attached for any reason other than a
+    /// refused frozen consent. Its media is kept as an interrupted take and offered in Reflect now;
+    /// it is never marked `failed`, because failed media is removed at the next launch.
+    func keepUnresolvedTake(_ transaction: RecordingTransaction, reason: String) async {
+        await recordingCompletionIsUnknown(transaction)
+        // If demotion fails the media stays under the canonical name, which is offered as well.
+        try? await asyncStore.demoteInterruptedTake(
+            sessionID: transaction.sessionID,
+            transactionID: transaction.transactionID
+        )
+        recordingTransactionsOfThisLaunch.remove(transaction.transactionID)
+        invalidateCachedPackages(for: transaction.sessionID)
+        await reloadListAsync()
+        lastStoreError = "Aufnahme konnte nicht übernommen werden und bleibt aufbewahrt: \(reason) "
+            + "In Reflektieren „Prüfen und übernehmen“ oder „Verwerfen“ wählen."
+    }
+
     /// Verifies and attaches an interrupted take. Returns the operator-facing outcome. Every
     /// failure keeps the media as an interrupted take; only `discardInterruptedTake` removes it.
     func recoverInterruptedTake(_ transactionID: UUID) async -> String {

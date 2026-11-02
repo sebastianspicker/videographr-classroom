@@ -140,13 +140,6 @@ public extension CVFeatures {
         }
     }
 
-    /// Fixture: flickering / unstable CV observations (low temporal stability).
-    static func fixtureUnstableObservation() -> CVFeatures {
-        var f = fixtureClassroomPresent()
-        f.observationStability = 0.25
-        return f
-    }
-
     /// Fixture: multi-person group work (board weak/secondary, people cluster mid-band).
     static func fixtureGroupWork() -> CVFeatures {
         CVFeatures.make { values in
@@ -170,62 +163,6 @@ public extension CVFeatures {
             values.estimatedClusterCount = 2
             values.faceScaleScore = 0.5
             values.boardTextDensity = 0.12
-            values.analysisSucceeded = true
-        }
-    }
-
-    /// Fixture: dialogue pair (two actors, moderate board).
-    static func fixtureDialoguePair() -> CVFeatures {
-        let board = ImageNormalizedRect(x: 0.3, y: 0.15, width: 0.4, height: 0.28)
-        return CVFeatures.make { values in
-            values.source = .fixture
-            values.boardConfidence = 0.55
-            values.boardRect = board
-            values.boardAspectQuality = 0.7
-            values.boardGeometryQuality = 0.65
-            values.boardEdgeSupport = 0.5
-            values.personCount = 2
-            values.personCoverage = 0.16
-            values.faceCount = 2
-            values.personMidBandOccupancy = 0.7
-            values.personCentroidY = 0.55
-            values.personCentroidX = 0.48
-            values.personBoardCoPresence = 0.5
-            values.observationStability = 0.9
-            values.personHorizontalSpread = 0.12
-            values.personVerticalSpread = 0.1
-            values.personClusteredness = 0.78
-            values.estimatedClusterCount = 1
-            values.faceScaleScore = 0.62
-            values.boardTextDensity = 0.25
-            values.analysisSucceeded = true
-        }
-    }
-
-    /// Fixture: student presentation near board (high co-presence, 1 actor under board).
-    static func fixtureStudentAtBoard() -> CVFeatures {
-        let board = ImageNormalizedRect(x: 0.2, y: 0.12, width: 0.6, height: 0.35)
-        return CVFeatures.make { values in
-            values.source = .fixture
-            values.boardConfidence = 0.88
-            values.boardRect = board
-            values.boardAspectQuality = 0.9
-            values.boardGeometryQuality = 0.85
-            values.boardEdgeSupport = 0.78
-            values.personCount = 1
-            values.personCoverage = 0.12
-            values.faceCount = 1
-            values.personMidBandOccupancy = 0.55
-            values.personCentroidY = 0.52
-            values.personCentroidX = 0.5
-            values.personBoardCoPresence = 0.82
-            values.observationStability = 0.9
-            values.personHorizontalSpread = 0.08
-            values.personVerticalSpread = 0.06
-            values.personClusteredness = 0.9
-            values.estimatedClusterCount = 1
-            values.faceScaleScore = 0.55
-            values.boardTextDensity = 0.6
             values.analysisSucceeded = true
         }
     }

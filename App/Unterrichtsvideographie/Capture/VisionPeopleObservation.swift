@@ -41,10 +41,10 @@ struct PeopleObservation {
         return poseConfidences.reduce(0, +) / Double(poseConfidences.count)
     }
 
-    func layout(board: ImageNormalizedRect?, confidence: Double) -> ClassroomLayoutMetrics {
-        let initial = ClassroomLayoutAnalyzer.analyze(layoutInput(board: board, confidence: confidence))
+    func layout() -> ClassroomLayoutMetrics {
+        let initial = ClassroomLayoutAnalyzer.analyze(layoutInput())
         guard jointPoints.count >= 3, rects.count < max(2, jointPoints.count / 4) else { return initial }
-        return blend(initial, with: jointLayout(board: board, confidence: confidence))
+        return blend(initial, with: jointLayout())
     }
 
     func saliencyOverlap(_ observation: VNObservation?) -> Double {
@@ -68,22 +68,18 @@ struct PeopleObservation {
         coverage = max(coverage, min(0.22, Double(count) * 0.05))
     }
 
-    private func layoutInput(board: ImageNormalizedRect?, confidence: Double) -> ClassroomLayoutAnalysisInput {
+    private func layoutInput() -> ClassroomLayoutAnalysisInput {
         var input = ClassroomLayoutAnalysisInput(personRects: rects)
-        input.board = board
-        input.boardConfidence = confidence
         input.faceCount = faceCount
         input.personCount = count
         return input
     }
 
-    private func jointLayout(board: ImageNormalizedRect?, confidence: Double) -> ClassroomLayoutMetrics {
+    private func jointLayout() -> ClassroomLayoutMetrics {
         let syntheticRects = jointPoints.map {
             ImageNormalizedRect(x: max(0, $0.x - 0.03), y: max(0, $0.y - 0.04), width: 0.06, height: 0.08)
         }
         var input = ClassroomLayoutAnalysisInput(personRects: syntheticRects)
-        input.board = board
-        input.boardConfidence = confidence
         input.faceCount = faceCount
         input.personCount = max(count, poseConfidences.count)
         return ClassroomLayoutAnalyzer.analyze(input)
@@ -110,8 +106,6 @@ struct PeopleObservation {
             $0.verticalSpread = max(initial.verticalSpread, joints.verticalSpread)
             $0.clusteredness = 0.45 * initial.clusteredness + 0.55 * joints.clusteredness
             $0.estimatedClusterCount = max(initial.estimatedClusterCount, joints.estimatedClusterCount)
-            $0.meanPairwiseDistance = max(initial.meanPairwiseDistance, joints.meanPairwiseDistance)
-            $0.pattern = initial.pattern == .unknown || initial.pattern == .empty ? joints.pattern : initial.pattern
             $0.faceScaleScore = max(initial.faceScaleScore, joints.faceScaleScore)
         }
     }

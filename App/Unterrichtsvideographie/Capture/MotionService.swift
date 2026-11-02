@@ -57,11 +57,14 @@ final class MotionService: ObservableObject {
     }
 
     private nonisolated func publish(_ motion: CMDeviceMotion, error: Error?, generation: Int) {
-        let attitude = motion.attitude
+        let gravity = motion.gravity
+        // Gravity, not Euler attitude: Euler angles are measured from a flat phone and break for an
+        // upright tripod mount (yaw is unstable in portrait). Panning is covered by the gyro rate below.
         let sample = OrientationSample(
-            pitchDegrees: attitude.pitch * 180.0 / .pi,
-            rollDegrees: attitude.roll * 180.0 / .pi,
-            yawDegrees: attitude.yaw * 180.0 / .pi
+            gravityX: gravity.x,
+            gravityY: gravity.y,
+            gravityZ: gravity.z,
+            mount: .inferred(gravityX: gravity.x, gravityY: gravity.y)
         )
         let gyro = motion.rotationRate
         let gyroMagnitude = sqrt(gyro.x * gyro.x + gyro.y * gyro.y + gyro.z * gyro.z) * 180.0 / .pi
@@ -79,10 +82,11 @@ final class MotionService: ObservableObject {
         guard self.generation == generation else { return }
         var metrics = tracker.update(orientation: sample, at: Date())
         let blended = max(metrics.angularSpeedDegreesPerSecond, gyroMagnitude * 0.85)
+        let smoothed = 0.35 * blended + 0.65 * metrics.smoothedAngularSpeed
         metrics = MotionMetrics(
             angularSpeedDegreesPerSecond: blended,
-            isStable: blended <= 12 && metrics.smoothedAngularSpeed <= 12,
-            smoothedAngularSpeed: 0.35 * blended + 0.65 * metrics.smoothedAngularSpeed
+            isStable: smoothed <= GuidanceConfig.default.maxSmoothedAngularSpeed,
+            smoothedAngularSpeed: smoothed
         )
         orientation = sample
         motionMetrics = metrics

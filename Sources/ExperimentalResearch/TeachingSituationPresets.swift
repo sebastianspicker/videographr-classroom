@@ -75,8 +75,6 @@ public struct TeachingSituationPreset: Equatable, Sendable, Identifiable {
     public var mismatchHintDE: String
     /// Proactive capture guidance for this situation (setup / pre-roll).
     public var captureGuidanceDE: String
-    /// Short research anchor (IPN / TIMSS / production literature).
-    public var researchAnchorDE: String
 
     public struct Values: Sendable {
         public var id: TeachingSituationID = .frontalBoardInstruction
@@ -96,7 +94,6 @@ public struct TeachingSituationPreset: Equatable, Sendable, Identifiable {
         public var preferredLayouts: [ClassroomLayoutPattern] = []
         public var mismatchHintDE = ""
         public var captureGuidanceDE = ""
-        public var researchAnchorDE = ""
 
         public init() {}
     }
@@ -119,7 +116,6 @@ public struct TeachingSituationPreset: Equatable, Sendable, Identifiable {
         preferredLayouts = values.preferredLayouts
         mismatchHintDE = values.mismatchHintDE
         captureGuidanceDE = values.captureGuidanceDE
-        researchAnchorDE = values.researchAnchorDE
     }
 
     public static func make(_ configure: (inout Values) -> Void) -> TeachingSituationPreset {

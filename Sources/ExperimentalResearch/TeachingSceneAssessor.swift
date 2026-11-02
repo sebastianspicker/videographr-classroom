@@ -9,12 +9,7 @@ struct SceneInput {
     let co: Double
     let multi: Double
     let mid: Double
-    let coverage: Double
-    let centroidY: Double?
-    let boardRect: ImageNormalizedRect?
     let layout: ClassroomLayoutPattern
-    let faceScale: Double
-    let density: Double
     let textDensity: Double
     let secondaryBoard: Double
     let stability: Double
@@ -28,12 +23,7 @@ struct SceneInput {
         co = CVFeatureFusion.coPresenceScore(from: cv)
         multi = min(1, Double(max(0, peopleN - 1)) / 4.0)
         mid = cv.personMidBandOccupancy
-        coverage = cv.personCoverage
-        centroidY = cv.personCentroidY
-        boardRect = cv.boardRect
         layout = signals.layoutPattern
-        faceScale = cv.faceScaleScore
-        density = signals.interactionDensity
         textDensity = cv.boardTextDensity
         secondaryBoard = cv.secondaryWritingSurfaceSupport
         stability = cv.observationStability
@@ -122,8 +112,8 @@ private struct AssessmentResultInput {
 
 private func assessedResult(_ result: AssessmentResultInput) -> TeachingSceneAssessment {
     let summary = result.matches
-        ? "Szene „\(result.scene.titleDE)“ passt zur Situation „\(result.input.preset.titleDE)“ (Match \(pct(result.match)))."
-        : "Szene „\(result.scene.titleDE)“ weicht von „\(result.input.preset.titleDE)“ ab (Match \(pct(result.match))). \(result.input.preset.mismatchHintDE)"
+        ? "Szene „\(result.scene.titleDE)“ passt zur Situation „\(result.input.preset.titleDE)“ (Match \(percentText(result.match)))."
+        : "Szene „\(result.scene.titleDE)“ weicht von „\(result.input.preset.titleDE)“ ab (Match \(percentText(result.match))). \(result.input.preset.mismatchHintDE)"
     let classification = TeachingSceneAssessment.Classification(sceneType: result.scene, confidence: result.confidence, presetMatchScore: result.match, matchesPreset: result.matches)
     let people = TeachingSceneAssessment.PeopleSignals(peopleSignal: result.input.peopleSignal, coPresenceSignal: result.input.co, multiPersonSignal: result.input.multi)
     let structure = TeachingSceneAssessment.StructureSignals(boardSignal: result.input.board, layoutSignal: result.layoutFit, layoutPattern: result.input.layout)
@@ -158,4 +148,3 @@ private func hasLayoutPreference(_ input: MatchScoreInput) -> Bool { input.layou
 private let relatedLayouts: [ClassroomLayoutPattern: Set<ClassroomLayoutPattern>] = [.frontalRows: [.presentationFocus], .presentationFocus: [.frontalRows], .dyadClose: [.frontalRows, .seatworkScattered], .multiCluster: [.sparseSpread, .circleLike, .wholeRoomDense], .circleLike: [.multiCluster, .wholeRoomDense], .sparseSpread: [.multiCluster, .seatworkScattered, .wholeRoomDense], .wholeRoomDense: [.multiCluster, .sparseSpread, .circleLike], .seatworkScattered: [.sparseSpread, .multiCluster], .unknown: [], .empty: []]
 private func layoutFitScore(pattern: ClassroomLayoutPattern, preset: TeachingSituationPreset) -> Double { guard pattern != .unknown && pattern != .empty else { return 0.4 }; if preset.preferredLayouts.contains(pattern) { return 0.92 }; return preset.preferredLayouts.contains { relatedLayouts[pattern, default: []].contains($0) } ? 0.55 : 0.18 }
 private func relatedness(_ scene: TeachingSceneType, preset: TeachingSituationPreset) -> Double { preset.acceptableScenes.contains(scene) ? 0.55 : 0.2 }
-private func pct(_ value: Double) -> String { "\(Int((value * 100).rounded())) %" }

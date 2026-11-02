@@ -71,7 +71,7 @@ public struct PlacementAssessment: Equatable, Sendable {
             dimension("pitch", "Neigung / Höhe", pitchOK, pitchOK ? "Neigung im Arbeitsbereich." : "Höhe oder Neigung anpassen."),
             dimension("ceiling", "Deckenanteil", frame.ceilingFraction <= config.ceilingWarningFraction, "Direkt aus dem Bildanteil gemessen."),
             dimension("floor", "Bodenanteil", frame.floorFraction <= config.floorWarningFraction, "Direkt aus dem Bildanteil gemessen."),
-            dimension("writingSurface", "Schreibfläche", board >= config.boardMinScore, "Direktes Bildsignal (Score \(pct(board)))."),
+            dimension("writingSurface", "Schreibfläche", board >= config.boardMinScore, "Direktes Bildsignal (Score \(percentText(board)))."),
             dimension("light", "Gegenlicht / Belichtung", lightOK, "Direkte Belichtungs- und Clipping-Signale."),
             dimension("composition", "Bildausschnitt / Kontrast", compositionOK, "Direkte Bildstruktur und Belichtung."),
             dimension("stability", "Kameraruhe", stable, "Direkt aus Gerätebewegung gemessen.")
@@ -82,6 +82,5 @@ public struct PlacementAssessment: Equatable, Sendable {
         PlacementDimension(id: id, labelDE: label, ok: ok, detailDE: detail)
     }
 
-    private static func pct(_ value: Double) -> String { "\(Int((value * 100).rounded())) %" }
 
 }

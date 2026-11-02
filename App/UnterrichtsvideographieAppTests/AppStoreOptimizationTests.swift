@@ -62,7 +62,7 @@ final class AppStoreOptimizationTests: XCTestCase {
         let store = SessionStore(rootDirectory: root)
         try store.save(session(title: "First"))
         try store.save(session(title: "Second"))
-        let expectedIDs = try store.listSessionsWithDiagnostics(includeJournals: false).sessions.map(\.id)
+        let expectedIDs = try store.listSessionsWithDiagnostics().sessions.map(\.id)
         let appStore = AppStore(store: store, bootstrapMode: .deferred)
         await appStore.bootstrap()
         let activeID = try XCTUnwrap(expectedIDs.first)

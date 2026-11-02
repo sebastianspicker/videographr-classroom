@@ -84,9 +84,10 @@ public struct CVObservationSmoother: Equatable, Sendable {
             output.personCoverageDelta = 0
             return output
         }
-        output.boardConfidence = aBlend(features.boardConfidence, toward: emaBoardConfidence)
-        output.personMidBandOccupancy = aBlend(features.personMidBandOccupancy, toward: emaMidBand)
-        output.personBoardCoPresence = aBlend(coPresence, toward: emaCoPresence)
+        // The EMA already contains the current sample with weight alpha.
+        output.boardConfidence = min(1, max(0, emaBoardConfidence))
+        output.personMidBandOccupancy = min(1, max(0, emaMidBand))
+        output.personBoardCoPresence = min(1, max(0, emaCoPresence))
         output.boardAspectQuality = aBlend(features.boardAspectQuality, toward: last?.boardAspectQuality ?? features.boardAspectQuality)
         output.boardGeometryQuality = aBlend(features.boardGeometryQuality, toward: last?.boardGeometryQuality ?? features.boardGeometryQuality)
         output.boardEdgeSupport = aBlend(features.boardEdgeSupport, toward: last?.boardEdgeSupport ?? features.boardEdgeSupport)

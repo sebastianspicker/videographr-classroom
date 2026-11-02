@@ -116,7 +116,7 @@ public struct FilmingGuidancePolicy: Sendable {
 
     private func audioTip(_ audio: AudioGuidance, isRecording: Bool) -> PrioritizedTip? {
         guard !audio.isReady || audio.status == .hot else { return nil }
-        let severity = audioSeverity(for: audio.status)
+        let severity = audioSeverity(for: audio)
         let tip = GuidanceTip((
             id: "audio-\(audio.status.rawValue)", category: .general, severity: severity,
             message: audio.message, actionHint: isRecording ? midTakeAudioAction(audio) : audio.actionHint
@@ -127,11 +127,12 @@ public struct FilmingGuidancePolicy: Sendable {
         )
     }
 
-    private func audioSeverity(for status: AudioStatus) -> GuidanceSeverity {
-        switch status {
-        case .clipping, .silent: return .critical
+    private func audioSeverity(for audio: AudioGuidance) -> GuidanceSeverity {
+        switch audio.status {
+        case .clipping, .silent, .dropout: return .critical
         case .low: return .warning
-        case .good, .hot, .dropout: return .info
+        case .hot: return audio.isReady ? .info : .warning
+        case .good: return .info
         }
     }
 
@@ -162,7 +163,7 @@ public struct FilmingGuidancePolicy: Sendable {
         if criticalCount > 0 { return "Vor der Aufnahme: \(criticalCount) kritische Punkte beheben." }
         return audio.isReady
             ? "Pre-Roll: Bild, Lage und Audio prüfen - dann kontinuierliche Aufnahme starten."
-            : "Vor der Aufnahme: Audio pegelein."
+            : "Vor der Aufnahme: Audiopegel prüfen."
     }
 
     // MARK: - Classification

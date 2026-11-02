@@ -11,6 +11,8 @@ extension SessionStore {
         var removedCodingJournals: [String] = []
         var removedImports: [String] = []
         var diagnostics: [RecordingArtifactDiagnostic] = []
+        /// IDs of every `<UUID>.json` root entry, decodable or not; only a missing file makes a journal an orphan.
+        var existingSessionIDs: Set<UUID> = []
     }
 
     struct JournalDirectoryReconciliation {
@@ -25,7 +27,8 @@ extension SessionStore {
             try validateStoreDirectories()
             let knownSessions = try knownSessionsForReconciliation()
             var state = PersistenceReconciliationState()
-            try reconcileJournalDirectories(knownSessions, state: &state)
+            state.existingSessionIDs = try existingSessionIDsForReconciliation()
+            try reconcileJournalDirectories(state: &state)
             try reconcileImportedMedia(knownSessions, state: &state)
             return PersistenceArtifactReconciliationReport(
                 removedOrphanJournalFileNames: state.removedJournals.sorted(),
@@ -43,28 +46,34 @@ extension SessionStore {
             }
     }
 
-    func reconcileJournalDirectories(_ sessions: [UUID: CaptureSession], state: inout PersistenceReconciliationState) throws {
+    func existingSessionIDsForReconciliation() throws -> Set<UUID> {
+        Set(try FileManager.default.contentsOfDirectory(at: rootDirectory, includingPropertiesForKeys: nil).compactMap { url in
+            url.pathExtension == "json" ? UUID(uuidString: url.deletingPathExtension().lastPathComponent) : nil
+        })
+    }
+
+    func reconcileJournalDirectories(state: inout PersistenceReconciliationState) throws {
         var observations = JournalDirectoryReconciliation(
             name: Self.observationDirectoryName,
             symbolicLinkError: .observationDirectoryIsSymbolicLink,
             removedFileNames: state.removedJournals
         )
-        try reconcileJournalDirectory(&observations, sessions: sessions, diagnostics: &state.diagnostics)
+        try reconcileJournalDirectory(&observations, existingIDs: state.existingSessionIDs, diagnostics: &state.diagnostics)
         state.removedJournals = observations.removedFileNames
         var coding = JournalDirectoryReconciliation(
             name: Self.codingSnapshotDirectoryName,
             symbolicLinkError: .codingSnapshotDirectoryIsSymbolicLink,
             removedFileNames: state.removedCodingJournals
         )
-        try reconcileJournalDirectory(&coding, sessions: sessions, diagnostics: &state.diagnostics)
+        try reconcileJournalDirectory(&coding, existingIDs: state.existingSessionIDs, diagnostics: &state.diagnostics)
         state.removedCodingJournals = coding.removedFileNames
     }
 
-    func reconcileJournalDirectory(_ request: inout JournalDirectoryReconciliation, sessions: [UUID: CaptureSession], diagnostics: inout [RecordingArtifactDiagnostic]) throws {
+    func reconcileJournalDirectory(_ request: inout JournalDirectoryReconciliation, existingIDs: Set<UUID>, diagnostics: inout [RecordingArtifactDiagnostic]) throws {
         let directory = rootDirectory.appendingPathComponent(request.name, isDirectory: true)
         guard FileManager.default.fileExists(atPath: directory.path) else { return }
         if try isSymbolicLink(directory) { throw request.symbolicLinkError }
-        try removeOrphanJournals(in: directory, knownSessions: sessions, removedFileNames: &request.removedFileNames, diagnostics: &diagnostics)
+        try removeOrphanJournals(in: directory, existingSessionIDs: existingIDs, removedFileNames: &request.removedFileNames, diagnostics: &diagnostics)
     }
 
     func reconcileImportedMedia(_ sessions: [UUID: CaptureSession], state: inout PersistenceReconciliationState) throws {
@@ -84,6 +93,10 @@ extension SessionStore {
         }) { return }
         if try isSymbolicLink(marker) { throw SessionStoreError.recordingFileIsSymbolicLink }
         if sessions[identity.sessionID]?.mediaAssets.contains(where: { $0.id == identity.assetID }) == true { try FileManager.default.removeItem(at: marker); return }
+        // A session file that exists but does not decode may still reference this media.
+        if sessions[identity.sessionID] == nil, state.existingSessionIDs.contains(identity.sessionID) {
+            state.diagnostics.append(.init(fileName: marker.lastPathComponent, reason: .sessionMetadataInvalid)); return
+        }
         let mediaURL = directory.appendingPathComponent("\(identity.assetID.uuidString).mp4")
         if try isSymbolicLink(mediaURL) { state.diagnostics.append(.init(fileName: mediaURL.lastPathComponent, reason: .artifactIsSymbolicLink)); return }
         if FileManager.default.fileExists(atPath: mediaURL.path) { guard try fileType(at: mediaURL) == .typeRegular else { state.diagnostics.append(.init(fileName: mediaURL.lastPathComponent, reason: .unsupportedArtifactType)); return }; try FileManager.default.removeItem(at: mediaURL); state.removedImports.append(mediaURL.lastPathComponent) }

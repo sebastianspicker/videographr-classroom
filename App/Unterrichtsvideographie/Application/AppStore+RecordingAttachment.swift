@@ -1,6 +1,28 @@
 import Foundation
 import SessionCore
 
+/// The only finalization failures that may delete written media: the frozen consent was refused,
+/// or the operator deleted the session while its take was finishing.
+enum RecordingFinalizationError: Error, LocalizedError {
+    case authorizationInactive(String)
+    case sessionDeleted
+
+    var errorDescription: String? {
+        switch self {
+        case let .authorizationInactive(message): message
+        case .sessionDeleted: "Die Sitzung wurde gelöscht, während die Aufnahme abgeschlossen wurde."
+        }
+    }
+}
+
+enum RecordingAttachmentOutcome {
+    case attached
+    /// The frozen consent was refused or the session was deleted; the media must be rolled back.
+    case refused
+    /// Any other failure; the media is kept as an interrupted take for an operator decision.
+    case kept
+}
+
 @MainActor
 extension AppStore {
     /// Attaches final media metadata to the originating transaction, never the selected session.
@@ -8,20 +30,32 @@ extension AppStore {
         for transaction: RecordingTransaction,
         finalizedURL: URL,
         runtimeStatus: CaptureRuntimeStatus
-    ) async -> Bool {
-        guard persistenceIsReady else { return false }
+    ) async -> RecordingAttachmentOutcome {
+        // Without a ready store nothing is touched; startup reconciliation keeps the media.
+        guard persistenceIsReady else { return .kept }
         do {
             try await attachFinalizedMedia(
                 for: transaction,
                 finalizedURL: finalizedURL,
                 runtimeStatus: runtimeStatus
             )
-            return true
+            return .attached
+        } catch let error as RecordingFinalizationError {
+            // A deleted session has no take left to close; its media goes with it.
+            if case .authorizationInactive = error {
+                let message = error.localizedDescription
+                await recordingDidFail(transaction, reason: message)
+                lastStoreError = message
+            }
+            return .refused
         } catch {
-            let message = error.localizedDescription
-            await recordingDidFail(transaction, reason: message)
-            lastStoreError = message
-            return false
+            // The session may have been deleted while its media was inspected; nothing is left to keep.
+            // A read error (for example a locked device) is not a deletion, so only a confirmed absence counts.
+            do {
+                if try await asyncStore.load(id: transaction.sessionID) == nil { return .refused }
+            } catch {}
+            await keepUnresolvedTake(transaction, reason: error.localizedDescription)
+            return .kept
         }
     }
 
@@ -64,8 +98,10 @@ extension AppStore {
         for transaction: RecordingTransaction,
         finalizedURL: URL
     ) async throws -> RecordingFinalizationContext {
-        guard let initial = try await asyncStore.load(id: transaction.sessionID),
-              let manifest = initial.takeManifests.first(where: { $0.id == transaction.transactionID }),
+        guard let initial = try await asyncStore.load(id: transaction.sessionID) else {
+            throw RecordingFinalizationError.sessionDeleted
+        }
+        guard let manifest = initial.takeManifests.first(where: { $0.id == transaction.transactionID }),
               let authorization = manifest.authorization,
               RecordingStateMachine.isFinalizable(manifest)
         else {
@@ -74,9 +110,9 @@ extension AppStore {
             ])
         }
         guard initial.authorizes(authorization, at: Date()) else {
-            throw CocoaError(.fileWriteNoPermission, userInfo: [
-                NSLocalizedDescriptionKey: "Die eingefrorene Aufnahmefreigabe war bei der Finalisierung nicht mehr aktiv."
-            ])
+            throw RecordingFinalizationError.authorizationInactive(
+                "Die eingefrorene Aufnahmefreigabe war bei der Finalisierung nicht mehr aktiv."
+            )
         }
         let canonicalURL = try await asyncStore.prepareRecordingURL(for: initial)
         guard finalizedURL.standardizedFileURL == canonicalURL.standardizedFileURL else {
@@ -111,12 +147,16 @@ extension AppStore {
             includeJournals: true
         ) { target in
             guard let manifestIndex = target.takeManifests.firstIndex(where: { $0.id == context.manifest.id }),
-                  RecordingStateMachine.isFinalizable(target.takeManifests[manifestIndex]),
-                  target.authorizes(context.authorization, at: context.endedAt)
+                  RecordingStateMachine.isFinalizable(target.takeManifests[manifestIndex])
             else {
-                throw CocoaError(.fileWriteNoPermission, userInfo: [
-                    NSLocalizedDescriptionKey: "Die eingefrorene Aufnahmefreigabe ist bei der Finalisierung nicht mehr aktiv."
+                throw CocoaError(.fileReadCorruptFile, userInfo: [
+                    NSLocalizedDescriptionKey: "Abgeschlossene Aufnahme konnte keinem vorbereiteten Take zugeordnet werden."
                 ])
+            }
+            guard target.authorizes(context.authorization, at: context.endedAt) else {
+                throw RecordingFinalizationError.authorizationInactive(
+                    "Die eingefrorene Aufnahmefreigabe ist bei der Finalisierung nicht mehr aktiv."
+                )
             }
             guard target.mediaAssets.contains(where: {
                 $0.id == target.takeManifests[manifestIndex].mediaAssetID

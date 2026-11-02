@@ -1,8 +1,9 @@
 import Foundation
 
 /// Device attitude sample from CoreMotion (or synthetic test input).
-/// Angles are in degrees. Pitch: device tilt toward/away from scene.
-/// Roll: left/right bank. Positive pitch ≈ camera tilted up (more ceiling).
+/// Angles are in degrees. Pitch: camera elevation, positive = camera tilted up (more ceiling).
+/// Roll: in-plane horizon error relative to the mount orientation (0 = level).
+/// Both derive from gravity; see `init(gravityX:gravityY:gravityZ:mount:yawDegrees:)`.
 public struct OrientationSample: Equatable, Sendable {
     public var pitchDegrees: Double
     public var rollDegrees: Double
@@ -54,6 +55,7 @@ public struct FrameMetrics: Equatable, Sendable {
     public var floorFraction: Double
     public var backlightScore: Double
     public var horizontalBrightnessImbalance: Double
+    /// Edge-region brightness distance from mid-tone (0...1); not a detection of empty image areas.
     public var emptyEdgeFraction: Double
     /// Global contrast (max − min luminance proxy via percentile-like range).
     public var globalContrast: Double

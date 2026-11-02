@@ -71,6 +71,19 @@ extension LiveStore {
             .sink { [weak self] _ in
                 self?.appIsActive = false
                 self?.privacyCoverIsVisible = true
+                // A running take survives transient overlays (Control Center, alerts, Siri);
+                // backgrounding and AVFoundation interruptions still finalize it.
+                guard self?.activeRecordingTransaction == nil else { return }
+                self?.suspend()
+            }
+            .store(in: &observerStorage.cancellables)
+        // Backgrounding always ends a take and starts its finalization background task, without
+        // relying on the view tear-down or the AVFoundation interruption arriving first.
+        NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                // An earlier suspend already requested the stop and cleared `liveIsActive`.
+                guard self?.liveIsActive == true else { return }
                 self?.suspend()
             }
             .store(in: &observerStorage.cancellables)

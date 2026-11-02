@@ -71,6 +71,7 @@ struct FrameRegionMetrics: Sendable {
     let preferDarkBoard: Bool
     let backlightScore: Double
     let horizontalImbalance: Double
+    /// Edge-region brightness distance from mid-tone; not a detection of empty image areas.
     let emptyEdgeFraction: Double
 
     static func measure(_ frame: FrameLuminanceBuffer) -> Self {

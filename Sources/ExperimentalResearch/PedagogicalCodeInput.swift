@@ -6,7 +6,10 @@ public struct PedagogicalCodeInput: Sendable {
     public struct Context: Sendable {
         public var cv: CVFeatures
         public var scene: TeachingSceneAssessment
-        public init(cv: CVFeatures, scene: TeachingSceneAssessment) { self.cv = cv; self.scene = scene }
+        public var signals: ExperimentalCaptureSignals?
+        public init(cv: CVFeatures, scene: TeachingSceneAssessment, signals: ExperimentalCaptureSignals? = nil) {
+            self.cv = cv; self.scene = scene; self.signals = signals
+        }
     }
     public struct Settings: Sendable {
         public var teachingSituation: TeachingSituationID
@@ -21,15 +24,22 @@ public struct PedagogicalCodeInput: Sendable {
     }
     public let cv: CVFeatures
     public let scene: TeachingSceneAssessment
+    /// Signals derived from `cv`; computed once by the caller to avoid re-deriving them per frame.
+    public let signals: ExperimentalCaptureSignals
     public let teachingSituation: TeachingSituationID
     public let frame: FrameMetrics
     public let analysisFocus: CodingAnalysisFocus?
 
-    public init(cv: CVFeatures, scene: TeachingSceneAssessment, settings: Settings = .init()) {
-        self.init(.init(context: .init(cv: cv, scene: scene), settings: settings))
+    public init(
+        cv: CVFeatures,
+        scene: TeachingSceneAssessment,
+        settings: Settings = .init(),
+        signals: ExperimentalCaptureSignals? = nil
+    ) {
+        self.init(.init(context: .init(cv: cv, scene: scene, signals: signals), settings: settings))
     }
 
-    public init(_ values: Values) { cv = values.context.cv; scene = values.context.scene; teachingSituation = values.settings.teachingSituation; frame = values.settings.frame; analysisFocus = values.settings.analysisFocus }
+    public init(_ values: Values) { cv = values.context.cv; scene = values.context.scene; signals = values.context.signals ?? ExperimentalCaptureSignals(cv: values.context.cv); teachingSituation = values.settings.teachingSituation; frame = values.settings.frame; analysisFocus = values.settings.analysisFocus }
 }
 
 public extension PedagogicalCoder {

@@ -94,14 +94,14 @@ extension LiveStore {
         DispatchQueue.main.asyncAfter(deadline: .now() + 8, execute: workItem)
     }
 
-    internal func armMetadataAttachmentWatchdog(for transaction: RecordingTransaction) {
+    internal func armMetadataAttachmentWatchdog(for transaction: RecordingTransaction, timeout: TimeInterval) {
         metadataAttachmentWatchdogWorkItem?.cancel()
         recordingWatchdogs.arm(.metadataAttachment, for: transaction)
         let workItem = DispatchWorkItem { [weak self] in
             self?.expireMetadataAttachmentWatchdog(for: transaction)
         }
         metadataAttachmentWatchdogWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 8, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + timeout, execute: workItem)
     }
 
     internal func cancelWatchdog(

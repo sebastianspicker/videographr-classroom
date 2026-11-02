@@ -47,34 +47,34 @@ extension CaptureSessionController: AVCaptureFileOutputRecordingDelegate {
     }
 
     private func finalizeSuccessfulRecording(_ recording: Recording, outputURL: URL) {
+        var promoted = false
         do {
             try recording.artifacts.secureFinalizedRecording(at: outputURL)
             guard !promotedArtifacts.isDestinationOwned(recording.destinationURL) else {
                 throw CocoaError(.fileWriteFileExists)
             }
             try promoteTemporaryMovie(from: outputURL, to: recording.destinationURL)
-            try verifyPromotedRecording(recording)
+            promoted = true
+            // Re-verify the local artifact policy under the canonical name.
+            try recording.artifacts.secureFinalizedRecording(at: recording.destinationURL)
             guard promotedArtifacts.register(recording.transaction, at: recording.destinationURL) else {
                 throw CocoaError(.fileWriteFileExists)
             }
             emitTransaction(.recordingFinished(recording.transaction, recording.destinationURL))
         } catch {
-            discardStagedRecording(recording, failure: error)
-        }
-    }
-
-    private func verifyPromotedRecording(_ recording: Recording) throws {
-        do {
-            try recording.artifacts.secureFinalizedRecording(at: recording.destinationURL)
-        } catch {
-            // Only this transaction promoted the canonical path: remove it to avoid an
-            // unverifiable artifact and never claim a saved take.
-            try? FileManager.default.removeItem(at: recording.destinationURL)
-            throw error
+            keepUnverifiedRecording(recording, promoted: promoted, failure: error)
         }
     }
 
     private func discardFailedRecording(_ recording: Recording, error: Error?) {
+        // A non-empty partial movie is often playable; keep it like a take cut off by termination.
+        if stagedRecordingHasContent(recording.temporaryURL) {
+            emitTransaction(.recordingKeptUnverified(
+                recording.transaction,
+                error?.localizedDescription ?? "Aufnahme wurde nicht erfolgreich abgeschlossen."
+            ))
+            return
+        }
         try? recording.artifacts.discardStagedRecording(at: recording.temporaryURL)
         emitTransaction(.recordingFailed(
             recording.transaction,
@@ -82,13 +82,21 @@ extension CaptureSessionController: AVCaptureFileOutputRecordingDelegate {
         ))
     }
 
-    private func discardStagedRecording(_ recording: Recording, failure: Error) {
-        // The SessionCore API only permits deletion of the exact transaction staging path.
-        try? recording.artifacts.discardStagedRecording(at: recording.temporaryURL)
-        emitTransaction(.recordingFailed(
+    private func keepUnverifiedRecording(_ recording: Recording, promoted: Bool, failure: Error) {
+        if promoted {
+            // Only this transaction promoted the canonical path: stage it again so it is never
+            // mistaken for a saved take. If the move fails it stays canonical, which is offered too.
+            try? FileManager.default.moveItem(at: recording.destinationURL, to: recording.temporaryURL)
+        }
+        emitTransaction(.recordingKeptUnverified(
             recording.transaction,
             "Aufnahme konnte nicht sicher gespeichert werden: \(failure.localizedDescription)"
         ))
+    }
+
+    private func stagedRecordingHasContent(_ url: URL) -> Bool {
+        guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]) else { return false }
+        return values.isRegularFile == true && (values.fileSize ?? 0) > 0
     }
 
     private func stopPendingSessionIfNeeded(for recording: Recording) {
