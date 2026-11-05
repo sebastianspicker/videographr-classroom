@@ -5,6 +5,8 @@ reviewing classroom video. It records session context and scoped consent, captur
 one continuous local take, stores time-linked reflection notes, and exports a
 consent-scoped study package.
 
+> _Claude was used to polish and proof-read the code and documentation of this repository._
+
 <details>
 <summary>Status and limitations</summary>
 

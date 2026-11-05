@@ -111,27 +111,135 @@ fact changes durable artifact ownership and must be processed in order.
 
 ## Principal runtime flows
 
+How does live sensor data reach the screen and the session store?
+
 ```mermaid
 flowchart LR
-    Setup["Setup and consent"] --> AppStore["AppStore"]
-    Reflect["Reflect and export"] --> AppStore
-    AppStore --> SessionStore["SessionStore"]
-    SessionStore --> Local["Application Support sessions"]
-
-    Devices["Camera, audio, motion"] --> Controller["CaptureSessionController"]
-    Controller -->|"runtime events"| LiveStore["LiveStore"]
-    Controller -->|"transaction events"| LiveStore
-    LiveStore --> Guidance["GuidanceEngine"]
-    LiveStore --> Research["ExperimentalResearch, when authorized"]
-    Guidance --> LiveUI["Live UI"]
-    Research --> LiveUI
-    LiveStore --> AppStore
-
-    Controller --> Staged["Staged MP4"]
-    Staged --> AppStore
-    AppStore --> Package["Leased study package"]
-    Package --> Share["System share sheet"]
+    subgraph frameworks [Apple frameworks]
+        av["AVCaptureSession"]
+        motion["MotionService"]
+    end
+    controller["CaptureSessionController"]
+    live["LiveStore"]
+    guidance["GuidanceEngine"]
+    research["ExperimentalResearch"]
+    ui["LiveGuidanceView"]
+    app["AppStore"]
+    av -->|"video and audio buffers"| controller
+    controller -.->|"runtime events"| live
+    controller -.->|"transaction events"| live
+    motion -.->|"device motion"| live
+    live -->|"evaluate"| guidance
+    live -->|"only when authorized"| research
+    live -->|"@Published state"| ui
+    live -->|"observations, finished takes"| app
+    classDef focus fill:#fde68a,stroke:#b45309,color:#1f2937
+    class live focus
 ```
+
+`CaptureSessionController` owns the AVFoundation queues and never touches view
+state; it only emits the two event lanes described above. `LiveStore` is the
+main-actor hub: it runs `GuidanceEngine` (and `ExperimentalResearch` only when the
+session authorizes it), publishes the result to `LiveGuidanceView`, and hands
+anything durable to `AppStore`. `AppStore` is the only writer of the session.
+
+Where in the code:
+[CaptureSessionController.swift](../App/Unterrichtsvideographie/Capture/CaptureSessionController.swift),
+[LiveStore.swift](../App/Unterrichtsvideographie/Capture/LiveStore.swift),
+[LiveStore+RecordingEvents.swift](../App/Unterrichtsvideographie/Capture/LiveStore+RecordingEvents.swift),
+[LiveStore+Guidance.swift](../App/Unterrichtsvideographie/Capture/LiveStore+Guidance.swift),
+[MotionService.swift](../App/Unterrichtsvideographie/Capture/MotionService.swift).
+
+### Journey: record a take
+
+What happens between tapping "Aufnahme starten" and the take appearing in
+Reflect?
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor op as Operator
+    participant ui as LiveGuidanceView
+    participant live as LiveStore
+    participant app as AppStore
+    participant store as SessionStore
+    participant cap as CaptureSessionController
+    op->>ui: Tap record
+    ui->>live: beginRecording(readiness, override)
+    live->>app: prepareSessionForRecording
+    app->>app: RecordingAdmission.evaluate
+    app->>store: mutateSession (RecordingStateMachine.prepare)
+    store-->>app: prepared take manifest
+    app-->>live: PreparedRecording (url, stagedURL)
+    live->>cap: startRecording(request)
+    cap->>cap: movieOutput.startRecording(to: stagedURL)
+    op->>ui: Tap stop
+    ui->>live: stopRecording()
+    cap->>cap: secure and promote staged MP4
+    cap--)live: recordingFinished(transaction, url)
+    live->>app: attachRecording(transaction, url)
+    app->>app: MediaInspector.inspect (duration, SHA-256)
+    app->>store: mutateSession (RecordingStateMachine.finalized)
+    app-->>live: .attached / .refused / .kept
+```
+
+Steps 3–6 freeze consent, transaction, destination and provenance in
+`session.json` before AVFoundation starts, so a crash at any later point leaves
+a known, recoverable take. Step 13 is the transaction lane: it is matched by
+`RecordingTransaction` identity, so a late callback cannot attach to a newer take.
+In step 16 the frozen authorization is checked again; in step 17 `.refused` rolls
+the promoted file back, `.kept` leaves it unverified for Reflect to resolve. In
+Simulator, step 2 stops at `rejectSimulatorRecordingAttempt()`.
+
+Where in the code:
+[LiveGuidanceView+Chrome.swift](../App/Unterrichtsvideographie/Live/LiveGuidanceView+Chrome.swift) (`recordBlock`),
+[LiveStore+LiveControl.swift](../App/Unterrichtsvideographie/Capture/LiveStore+LiveControl.swift) (`beginRecording`, `stopRecording`),
+[AppStore+Recording.swift](../App/Unterrichtsvideographie/Application/AppStore+Recording.swift) (`prepareSessionForRecording`),
+[CaptureSessionController+Recording.swift](../App/Unterrichtsvideographie/Capture/CaptureSessionController+Recording.swift) (`finalizeSuccessfulRecording`),
+[AppStore+RecordingAttachment.swift](../App/Unterrichtsvideographie/Application/AppStore+RecordingAttachment.swift) (`attachRecording`),
+[RecordingAdmission.swift](../Sources/SessionCore/Application/RecordingAdmission.swift),
+[RecordingStateMachine.swift](../Sources/SessionCore/Application/RecordingStateMachine.swift).
+
+### Journey: export a study package
+
+What happens when the operator taps "Paket erstellen und weitergeben"?
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor op as Operator
+    participant ui as ReflectView
+    participant app as AppStore
+    participant store as SessionStore
+    participant writer as StudyPackageWriter
+    participant share as iOS share sheet
+    op->>ui: Tap export
+    ui->>app: prepareExportForSharing()
+    app->>store: load(session)
+    app->>app: check required consent scopes
+    app->>writer: build(session, exportID)
+    writer-->>app: .videographrstudy URL
+    app->>writer: validatedManifest(at:)
+    app->>store: mutateSession (append attempted ExportEvent)
+    app-->>ui: PreparedExport
+    ui->>share: UIActivityViewController
+    share-->>ui: completed / cancelled
+    ui->>app: recordExportOutcome
+```
+
+The package is written to a temporary `VideographrExports` folder and checked
+against its own manifest (step 7) before anything is recorded. Step 8 re-checks
+that consent and the export projection did not change meanwhile, and writes the
+attempt before the share sheet opens (step 10), so an attempted disclosure is
+always on record. Step 12 records the outcome, but a "completed" share is not
+proof of delivery.
+
+Where in the code:
+[ReflectView+Export.swift](../App/Unterrichtsvideographie/Reflect/ReflectView+Export.swift),
+[AppStore+Export.swift](../App/Unterrichtsvideographie/Application/AppStore+Export.swift) (`prepareExportForSharing`, `recordExportOutcome`),
+[StudyPackageWriter.swift](../Sources/SessionCore/Persistence/StudyPackageWriter.swift) (`build`, `validatedManifest`).
+
+### Recording details
 
 For a recording, `AppStore` freezes the applicable authorization, transaction,
 asset, destination, and provenance before AVFoundation starts. Finalized media is
@@ -173,6 +281,23 @@ may be appended to the bounded research journal.
 `Unterrichtsvideographie/Sessions`. It persists session JSON, media references,
 and bounded observation and coding journals locally. `AppStore` reconciles known
 artifacts at startup and performs persistence away from the main actor.
+
+What is stored where on the device?
+
+| Location | Contents | Written by |
+| --- | --- | --- |
+| `Sessions/<session-id>.json` | Session context, consent grants, media assets, take manifests, annotations, export events | `SessionStore` via `AppStore` |
+| `Sessions/Observations/<session-id>.jsonl` | Append-only capture-observation journal | `SessionStore` (journals) |
+| `Sessions/CodingSnapshots/<session-id>.jsonl` | Append-only experimental coding journal | `SessionStore` (journals) |
+| `Sessions/Recordings/` | Recorded and imported MP4 files, staging files, import markers | `SessionStore`, `CaptureSessionController` |
+| `tmp/VideographrExports/` | Leased `.videographrstudy` packages awaiting a share result | `StudyPackageWriter` |
+
+Where in the code:
+[SessionStore.swift](../Sources/SessionCore/Persistence/SessionStore.swift),
+[SessionStoreCoreOperations.swift](../Sources/SessionCore/Persistence/SessionStoreCoreOperations.swift) (file names),
+[SessionStoreJournals.swift](../Sources/SessionCore/Persistence/SessionStoreJournals.swift),
+[SessionStoreImportAndRecovery.swift](../Sources/SessionCore/Persistence/SessionStoreImportAndRecovery.swift),
+[StudyPackageWriter.swift](../Sources/SessionCore/Persistence/StudyPackageWriter.swift).
 
 Ordinary autosaves upsert the affected session summary and retain media-lookup
 results, including missing files, until the media signature changes. Session and
@@ -290,6 +415,31 @@ and uploads `docs/demo/` as a static artifact. This repository contains no binar
 deployment, signing, TestFlight, App Store, backend, migration, or
 service-operations path. See [the source release procedure](../RELEASING.md).
 
+What does the release gate run, and what leaves the repository?
+
+```mermaid
+flowchart LR
+    trigger["Dependabot PR or<br/>manual dispatch"] --> gate["verify_release.sh"]
+    gate --> py["Python checks:<br/>architecture, hygiene, demo"]
+    py --> swiftpm["swift build -c release"]
+    swiftpm --> tests["App unit tests<br/>(iPhone Simulator)"]
+    tests --> analyze["Xcode Release analysis<br/>and app build"]
+    pages["Pages: manual dispatch"] --> demo["verify_demo.py"]
+    demo -->|"upload docs/demo"| site["GitHub Pages demo"]
+```
+
+Every step in the top chain is one block of `verify_release.sh`; any failure stops
+the gate. No step produces a signed app: the only published artifact is the
+static demo on the lower chain. Source prereleases are created by hand per
+`RELEASING.md`.
+
+Where in the code:
+[verify_release.sh](../scripts/verify_release.sh),
+[ci.yml](../.github/workflows/ci.yml),
+[pages.yml](../.github/workflows/pages.yml),
+[verify_architecture.py](../scripts/verify_architecture.py),
+[verify_public_hygiene.py](../scripts/verify_public_hygiene.py).
+
 ## Extension points and non-goals
 
 - Add direct observable capture transformations to `GuidanceEngine`.
@@ -323,3 +473,23 @@ builds require an exact protection-class match. Backup exclusion is verified in
 both environments. No local check establishes physical-device capture, microphone
 routes, interruptions, file protection, thermal or storage behavior, long takes,
 human-rater validity, or educational effectiveness.
+
+## Code map
+
+Read in this order to follow a take from app launch to export.
+
+| Path | Responsibility |
+| --- | --- |
+| [UnterrichtsvideographieApp.swift](../App/Unterrichtsvideographie/UnterrichtsvideographieApp.swift) | Composition root, device-owner authentication, creates `AppStore` and `LiveStore` |
+| [RootTabView.swift](../App/Unterrichtsvideographie/RootTabView.swift) | Five-tab shell: Setup, Live, Reflect, Learn, Info |
+| [Application/AppStore.swift](../App/Unterrichtsvideographie/Application/AppStore.swift) | Active session, bootstrap and reconciliation; extensions cover recording, media, export |
+| [Capture/LiveStore.swift](../App/Unterrichtsvideographie/Capture/LiveStore.swift) | Transient live state, capture event reduction, guidance publishing |
+| [Capture/CaptureSessionController.swift](../App/Unterrichtsvideographie/Capture/CaptureSessionController.swift) | AVFoundation session, recording file lifecycle |
+| [Sources/GuidanceEngine/](../Sources/GuidanceEngine/) | Pure direct-observation logic (framing, light, motion, audio) |
+| [Sources/SessionCore/Domain/](../Sources/SessionCore/Domain/) | Persisted value types, consent, codecs |
+| [Sources/SessionCore/Application/](../Sources/SessionCore/Application/) | Readiness, `RecordingAdmission`, `RecordingStateMachine` |
+| [Sources/SessionCore/Persistence/](../Sources/SessionCore/Persistence/) | `SessionStore`, journals, recovery, `StudyPackageWriter` |
+| [Sources/ExperimentalResearch/](../Sources/ExperimentalResearch/) | Opt-in, unvalidated scene and coding hypotheses, Gaussian geometry |
+| [Sources/LearnContent/](../Sources/LearnContent/) | German reference catalogue |
+| [Live/](../App/Unterrichtsvideographie/Live/), [Setup/](../App/Unterrichtsvideographie/Setup/), [Reflect/](../App/Unterrichtsvideographie/Reflect/) | SwiftUI feature views |
+| [scripts/verify_release.sh](../scripts/verify_release.sh) | Local and CI release gate |
