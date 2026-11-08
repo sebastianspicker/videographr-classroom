@@ -79,11 +79,6 @@ final class FrameSampler {
         )
     }
 
-    /// Back-compat helper used by some call sites.
-    func metrics(from sampleBuffer: CMSampleBuffer) -> FrameMetrics? {
-        analyze(from: sampleBuffer)?.metrics
-    }
-
     /// Clear Vision temporal smoother / rate-limit state (session start or stop).
     func resetVisionTemporalState() {
         vision.resetTemporalState()

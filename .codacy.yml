@@ -1,0 +1,8 @@
+---
+# Test code and smoke checks; not shipped app code.
+# scripts/verify_*.py stay analyzed: they run in CI.
+exclude_paths:
+  - "Tests/**"
+  - "App/UnterrichtsvideographieAppTests/**"
+  - "scripts/gaussian_checks/**"
+  - "scripts/test_*.py"

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Install the optional, pinned local depth model; never used by the app at runtime."""
 
 from __future__ import annotations

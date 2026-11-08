@@ -1,14 +1,12 @@
-#!/usr/bin/env python3
 """Verify the static GitHub Pages demo without a browser or third-party tools."""
 
 from __future__ import annotations
 
-from html.parser import HTMLParser
-from pathlib import Path
 import re
 import sys
+from html.parser import HTMLParser
+from pathlib import Path
 from urllib.parse import urlparse
-
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO_DIR = ROOT / "docs" / "demo"

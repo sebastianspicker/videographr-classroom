@@ -133,8 +133,7 @@ extension ResearchStructureAssessor {
 
     private static func peopleSpatialCheck(_ context: ResearchStructureContext) -> ResearchStructureCheck {
         let useful = context.spatialUsefulness >= context.config.minPeopleSpatialUsefulness
-        let centered = context.preset.minPeople == 0
-            || context.midBandOccupancy >= context.config.minPersonMidBandOccupancy * 0.85
+        let centered = context.midBandOccupancy >= context.config.minPersonMidBandOccupancy * 0.85
         return ResearchStructureCheck((
             id: "peopleSpatial",
             labelDE: "Räumliche Nutzbarkeit",

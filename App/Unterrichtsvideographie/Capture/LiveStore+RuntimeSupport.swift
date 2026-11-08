@@ -62,13 +62,17 @@ extension LiveStore {
         self.previousIdleTimerDisabled = nil
     }
 
+    /// Face-up/down/unknown keep the last valid angle (a tilted tripod phone reports face-up).
+    private static var lastValidRotationAngle: CGFloat = 90
+
     internal static func rotationAngle() -> CGFloat {
         switch UIDevice.current.orientation {
-        case .portrait: 90
-        case .portraitUpsideDown: 270
-        case .landscapeLeft: 180
-        case .landscapeRight: 0
-        default: 90
+        case .portrait: lastValidRotationAngle = 90
+        case .portraitUpsideDown: lastValidRotationAngle = 270
+        case .landscapeLeft: lastValidRotationAngle = 180
+        case .landscapeRight: lastValidRotationAngle = 0
+        default: break
         }
+        return lastValidRotationAngle
     }
 }

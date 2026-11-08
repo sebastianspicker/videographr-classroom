@@ -33,7 +33,6 @@ extension LiveStore {
 
     internal func handleBackgroundExpiration(for transaction: RecordingTransaction) {
         guard acceptsRecordingEvent(for: transaction) else { return }
-        recordStatusMessage = "Aufnahme wird wegen Hintergrundzeit finalisiert…"
         capture.requestStop(transaction: transaction, reason: "Hintergrundzeit abgelaufen - Finalisierung angefordert.")
         endRecordingBackgroundTask()
         isStartingRecording = false

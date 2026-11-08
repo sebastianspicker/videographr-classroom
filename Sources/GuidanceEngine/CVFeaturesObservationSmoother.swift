@@ -105,17 +105,4 @@ public struct CVObservationSmoother: Equatable, Sendable {
         let a = alpha
         return min(1, max(0, a * instant + (1 - a) * ema))
     }
-
-    /// Pure helper: stability from a sequence of multi-cue board + people usefulness pairs.
-    public static func stabilityScore(boardSeries: [Double], peopleSeries: [Double]) -> Double {
-        guard boardSeries.count >= 2, boardSeries.count == peopleSeries.count else {
-            return boardSeries.isEmpty ? 0 : 0.5
-        }
-        func variance(_ xs: [Double]) -> Double {
-            let m = xs.reduce(0, +) / Double(xs.count)
-            return xs.reduce(0) { $0 + ($1 - m) * ($1 - m) } / Double(xs.count)
-        }
-        let j = sqrt(variance(boardSeries)) + sqrt(variance(peopleSeries))
-        return min(1, max(0, 1.0 - j * 3.5))
-    }
 }

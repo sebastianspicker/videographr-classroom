@@ -370,7 +370,7 @@ struct FactRow: View {
 /// Status as glyph plus words; colour is never the only carrier.
 struct StatusMark: View {
     enum Kind {
-        case secured, open, attention, fault, unavailable, hypothesis, neutral
+        case secured, open, attention, fault, hypothesis, neutral
     }
 
     let text: String
@@ -403,7 +403,6 @@ struct StatusMark: View {
         case .open: "circle.dashed"
         case .attention: "exclamationmark.triangle"
         case .fault: "xmark.octagon"
-        case .unavailable: "minus"
         case .hypothesis: "questionmark.diamond"
         case .neutral: "circle"
         }
@@ -413,8 +412,8 @@ struct StatusMark: View {
         switch (kind, material) {
         case (.secured, .paper): Ink.secured
         case (.secured, .room): Room.secured
-        case (.open, .paper), (.unavailable, .paper), (.neutral, .paper): Ink.secondary
-        case (.open, .room), (.unavailable, .room), (.neutral, .room): Room.secondary
+        case (.open, .paper), (.neutral, .paper): Ink.secondary
+        case (.open, .room), (.neutral, .room): Room.secondary
         case (.attention, .paper): Ink.attention
         case (.attention, .room): Room.attention
         case (.fault, .paper): Ink.fault

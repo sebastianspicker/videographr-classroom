@@ -188,8 +188,8 @@ public enum CodingInformedReflection: Sendable {
         situation: TeachingSituationID
     ) -> [String: String] {
         let preset = TeachingSituationCatalogue.preset(for: situation)
-        let topIPN = coding.ipnDimensions.sorted(by: stableAssignmentOrder).prefix(3)
-        let topGTI = coding.gtiDimensions.sorted(by: stableAssignmentOrder).prefix(2)
+        let topIPN = coding.ipnDimensions.sorted(by: stablePedagogicalAssignmentOrder).prefix(3)
+        let topGTI = coding.gtiDimensions.sorted(by: stablePedagogicalAssignmentOrder).prefix(2)
         let ipnLine = topIPN.map { "\($0.labelDE) (\(percentText($0.level)))" }.joined(separator: "; ")
         let gtiLine = topGTI.map { "\($0.labelDE) (\(percentText($0.level)))" }.joined(separator: "; ")
 
@@ -224,12 +224,5 @@ public enum CodingInformedReflection: Sendable {
     private static func level(of code: String, in rows: [PedagogicalCodeAssignment]) -> String {
         guard let row = rows.first(where: { $0.code == code }) else { return "-" }
         return percentText(row.level)
-    }
-
-    private static func stableAssignmentOrder(
-        _ lhs: PedagogicalCodeAssignment,
-        _ rhs: PedagogicalCodeAssignment
-    ) -> Bool {
-        lhs.level == rhs.level ? lhs.code < rhs.code : lhs.level > rhs.level
     }
 }

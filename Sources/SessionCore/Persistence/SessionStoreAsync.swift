@@ -22,6 +22,8 @@ public struct SessionPersistenceBootstrap: Sendable {
 /// Actor-isolated facade for callers that must not perform storage work from the main actor.
 public actor SessionStoreAsync {
     private let store: SessionStore
+    /// A late autosave of a session deleted in this launch must not write it back.
+    private var deletedSessionIDs: Set<UUID> = []
 
     public init(store: SessionStore) { self.store = store }
     public func bootstrapPersistence() throws -> SessionPersistenceBootstrap {
@@ -30,7 +32,10 @@ public actor SessionStoreAsync {
         let recordingReconciliation = try store.reconcileRecordingArtifacts()
         try reconcileInterruptedSessionMetadata()
         let listing = try store.listSessionsWithDiagnostics()
-        let activeSession = try listing.sessions.first.flatMap { try store.load(id: $0.id) }
+        // A damaged journal must not block the app; the session still opens from its metadata.
+        let activeSession = try listing.sessions.first.flatMap {
+            try (try? store.load(id: $0.id)) ?? store.loadMetadataOnly(id: $0.id)
+        }
         return SessionPersistenceBootstrap(
             recordingReconciliation: recordingReconciliation,
             persistenceReconciliation: persistenceReconciliation,
@@ -43,7 +48,10 @@ public actor SessionStoreAsync {
     public func listSessionSummariesWithDiagnostics() throws -> SessionStoreListing {
         try store.listSessionsWithDiagnostics()
     }
-    public func deleteSessionAndMedia(id: UUID) throws { try store.deleteSessionAndMedia(id: id) }
+    public func deleteSessionAndMedia(id: UUID) throws {
+        try store.deleteSessionAndMedia(id: id)
+        deletedSessionIDs.insert(id)
+    }
     public func prepareRecordingURL(for session: CaptureSession) throws -> URL {
         try store.prepareRecordingURL(for: session)
     }
@@ -123,6 +131,11 @@ public actor SessionStoreAsync {
     @discardableResult
     public func mergeDraftSession(_ draft: CaptureSession) throws -> CaptureSession {
         guard var current = try store.loadMetadataOnly(id: draft.id) else {
+            guard !deletedSessionIDs.contains(draft.id) else {
+                throw CocoaError(.fileNoSuchFile, userInfo: [
+                    NSLocalizedDescriptionKey: "Session \(draft.id.uuidString) wurde gelöscht."
+                ])
+            }
             try store.save(draft)
             return try store.loadMetadataOnly(id: draft.id) ?? draft
         }
@@ -159,7 +172,8 @@ public actor SessionStoreAsync {
                 )
                 changed = true
             }
-            if changed { try store.save(candidate) }
+            // One unsavable session must not block the app; the repair is retried on the next launch.
+            if changed { try? store.save(candidate) }
         }
     }
 }

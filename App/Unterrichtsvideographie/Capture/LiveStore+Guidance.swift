@@ -24,6 +24,7 @@ extension LiveStore {
         usingSimulatorFallback = false
         isSessionRunning = false
         lastError = reason
+        canRetryCapture = true
         recordStatusMessage = "Kamera/Mikrofon nicht verfügbar. Berechtigungen und Hardware in Einstellungen prüfen."
 #endif
     }

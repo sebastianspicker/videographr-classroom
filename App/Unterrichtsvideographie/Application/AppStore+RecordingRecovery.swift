@@ -2,7 +2,8 @@ import Foundation
 import SessionCore
 
 extension AppStore {
-    func recordingCompletionIsUnknown(_ transaction: RecordingTransaction) async {
+    @discardableResult
+    func recordingCompletionIsUnknown(_ transaction: RecordingTransaction) async -> Bool {
         do {
             let persisted = try await mutateRecordingTransaction(transaction) { target, index in
                 _ = RecordingStateMachine.completionUnknown(
@@ -12,8 +13,10 @@ extension AppStore {
                 )
             }
             if session.id == persisted.id { applyPersistedSession(persisted) }
+            return true
         } catch {
             lastStoreError = "Unbestätigter Aufnahmeabschluss konnte nicht dauerhaft markiert werden: \(error.localizedDescription)"
+            return false
         }
     }
 
@@ -95,7 +98,7 @@ extension AppStore {
     /// refused frozen consent. Its media is kept as an interrupted take and offered in Reflect now;
     /// it is never marked `failed`, because failed media is removed at the next launch.
     func keepUnresolvedTake(_ transaction: RecordingTransaction, reason: String) async {
-        await recordingCompletionIsUnknown(transaction)
+        let marked = await recordingCompletionIsUnknown(transaction)
         // If demotion fails the media stays under the canonical name, which is offered as well.
         try? await asyncStore.demoteInterruptedTake(
             sessionID: transaction.sessionID,
@@ -104,6 +107,8 @@ extension AppStore {
         recordingTransactionsOfThisLaunch.remove(transaction.transactionID)
         invalidateCachedPackages(for: transaction.sessionID)
         await reloadListAsync()
+        // On failure the real error set by recordingCompletionIsUnknown stays visible.
+        guard marked else { return }
         lastStoreError = "Aufnahme konnte nicht übernommen werden und bleibt aufbewahrt: \(reason) "
             + "In Reflektieren „Prüfen und übernehmen“ oder „Verwerfen“ wählen."
     }

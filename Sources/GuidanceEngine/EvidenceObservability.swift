@@ -47,10 +47,6 @@ public struct CaptureObservabilityAssessment: Equatable, Sendable {
         self.dimensions = dimensions
     }
 
-    public var unavailableDimensionIDs: [String] {
-        dimensions.filter { $0.status == .unavailable }.map(\.id)
-    }
-
     public static func assess(
         orientation: OrientationSample,
         frame: FrameMetrics,

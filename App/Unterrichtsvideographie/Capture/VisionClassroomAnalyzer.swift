@@ -77,8 +77,8 @@ final class VisionClassroomAnalyzer {
             (.mid, requests.mid),
             (.core, requests.core)
         ]
-        for (coverage, requestSet) in candidates {
-            if (try? handler.perform(requestSet)) != nil { return coverage }
+        for (coverage, requestSet) in candidates where (try? handler.perform(requestSet)) != nil {
+            return coverage
         }
         return nil
     }

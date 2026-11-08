@@ -11,13 +11,13 @@ import GuidanceEngine
 final class MotionService: ObservableObject {
     @Published private(set) var orientation = OrientationSample(pitchDegrees: 0, rollDegrees: 0, yawDegrees: 0)
     @Published private(set) var motionMetrics = MotionMetrics.stable
-    @Published private(set) var isRunning = false
-    @Published private(set) var statusMessage = "Lageerfassung bereit"
 
     private let manager = CMMotionManager()
     private let queue = OperationQueue()
     private var tracker = MotionStabilityTracker()
     private var generation = 0
+
+    init() { queue.maxConcurrentOperationCount = 1 }
 
     /// Start ~15 Hz device-motion updates (or synthetic values in Simulator).
     func start() {
@@ -36,23 +36,18 @@ final class MotionService: ObservableObject {
             }
             self?.publish(motion, error: error, generation: activeGeneration)
         }
-        isRunning = true
     }
 
     private func startSyntheticMotion() {
-        statusMessage = "Bewegungssensor nicht verfügbar (Simulator: synthetische Werte)"
         orientation = OrientationSample(pitchDegrees: 3, rollDegrees: 1, yawDegrees: 0)
         motionMetrics = .stable
-        isRunning = true
     }
 
     private nonisolated func handleUnavailableMotion(_ error: Error?, generation: Int) {
-        guard let error else { return }
+        guard error != nil else { return }
         Task { @MainActor [weak self] in
             guard let self, self.generation == generation else { return }
             self.manager.stopDeviceMotionUpdates()
-            self.isRunning = false
-            self.statusMessage = "Lageerfassung nicht verfügbar: \(error.localizedDescription)"
         }
     }
 
@@ -66,21 +61,23 @@ final class MotionService: ObservableObject {
             gravityZ: gravity.z,
             mount: .inferred(gravityX: gravity.x, gravityY: gravity.y)
         )
+        let sampleTime = Date(timeIntervalSinceNow: motion.timestamp - ProcessInfo.processInfo.systemUptime)
         let gyro = motion.rotationRate
         let gyroMagnitude = sqrt(gyro.x * gyro.x + gyro.y * gyro.y + gyro.z * gyro.z) * 180.0 / .pi
         Task { @MainActor [weak self] in
-            self?.apply(sample, gyroMagnitude: gyroMagnitude, error: error, generation: generation)
+            self?.apply(sample, gyroMagnitude: gyroMagnitude, at: sampleTime, error: error, generation: generation)
         }
     }
 
     private func apply(
         _ sample: OrientationSample,
         gyroMagnitude: Double,
+        at sampleTime: Date,
         error: Error?,
         generation: Int
     ) {
         guard self.generation == generation else { return }
-        var metrics = tracker.update(orientation: sample, at: Date())
+        var metrics = tracker.update(orientation: sample, at: sampleTime)
         let blended = max(metrics.angularSpeedDegreesPerSecond, gyroMagnitude * 0.85)
         let smoothed = 0.35 * blended + 0.65 * metrics.smoothedAngularSpeed
         metrics = MotionMetrics(
@@ -90,20 +87,12 @@ final class MotionService: ObservableObject {
         )
         orientation = sample
         motionMetrics = metrics
-        statusMessage = error?.localizedDescription ?? String(
-            format: "Pitch %.0f° · Roll %.0f° · ω %.0f°/s",
-            sample.pitchDegrees,
-            sample.rollDegrees,
-            metrics.smoothedAngularSpeed
-        )
     }
 
     /// Stop hardware updates and reset the stability tracker.
     func stop() {
         generation &+= 1
         manager.stopDeviceMotionUpdates()
-        isRunning = false
-        statusMessage = "Lageerfassung gestoppt"
         tracker.reset()
     }
 }

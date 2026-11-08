@@ -47,7 +47,6 @@ extension AppStore {
             return PreparedRecording(
                 sessionID: persisted.id,
                 transactionID: preparation.transactionID,
-                mediaAssetID: artifacts.asset.id,
                 url: artifacts.url,
                 stagedURL: artifacts.stagedURL,
                 authorization: authorization,

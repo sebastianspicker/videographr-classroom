@@ -25,7 +25,7 @@ final class CaptureSessionController: NSObject {
         case recordingFinalizing(RecordingTransaction)
         case recordingFinished(RecordingTransaction, URL)
         case recordingRollbackCompleted(RecordingTransaction, String?)
-        case recordingFailed(RecordingTransaction?, String)
+        case recordingFailed(RecordingTransaction, String)
         /// Written media whose securing or verification failed; it is kept staged, never deleted.
         case recordingKeptUnverified(RecordingTransaction, String)
         case recordingStopRequested(RecordingTransaction, String)

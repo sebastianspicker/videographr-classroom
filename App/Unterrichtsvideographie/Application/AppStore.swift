@@ -38,7 +38,6 @@ final class AppStore: ObservableObject {
     struct PreparedRecording: Sendable {
         let sessionID: UUID
         let transactionID: UUID
-        let mediaAssetID: UUID
         let url: URL
         let stagedURL: URL
         let authorization: CaptureAuthorizationSnapshot

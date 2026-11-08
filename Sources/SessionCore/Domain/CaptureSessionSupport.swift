@@ -84,30 +84,4 @@ public struct ConsentRecord: Codable, Equatable, Sendable {
         self.storageResponsibilityAcknowledged = storageResponsibilityAcknowledged
         self.acknowledgedAt = acknowledgedAt
     }
-
-    public var isFullyAcknowledged: Bool {
-        informedParticipantsAcknowledged
-            && secondaryUseAcknowledged
-            && storageResponsibilityAcknowledged
-    }
-
-    /// Applies the three consent confirmations as one state transition.
-    /// The acknowledgment time records only entry into the fully-acknowledged state.
-    public mutating func applyAcknowledgements(
-        informedParticipants: Bool,
-        secondaryUse: Bool,
-        storageResponsibility: Bool,
-        at date: Date = Date()
-    ) {
-        let wasFullyAcknowledged = isFullyAcknowledged
-        informedParticipantsAcknowledged = informedParticipants
-        secondaryUseAcknowledged = secondaryUse
-        storageResponsibilityAcknowledged = storageResponsibility
-
-        if isFullyAcknowledged {
-            if !wasFullyAcknowledged || acknowledgedAt == nil { acknowledgedAt = date }
-        } else {
-            acknowledgedAt = nil
-        }
-    }
 }

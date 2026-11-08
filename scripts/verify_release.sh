@@ -15,7 +15,7 @@ echo "==> Static Pages demo"
 PYTHONDONTWRITEBYTECODE=1 python3 scripts/verify_demo.py
 
 echo "==> Model download bounds"
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.test_prepare_gaussian_model
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest scripts.test_prepare_gaussian_model scripts.test_public_hygiene
 
 echo "==> Script syntax"
 bash -n scripts/*.sh

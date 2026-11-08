@@ -25,9 +25,9 @@ final class LiveStore: NSObject, ObservableObject {
     @Published var usingSimulatorFallback = false
     @Published var audioSample = AudioLevelSample()
     @Published var isStartingRecording = false
+    @Published var isPreparingRecording = false
     @Published var isRecording = false
     @Published var isFinalizingRecording = false
-    @Published var lastRecordingURL: URL?
     @Published var recordStatusMessage: String?
     /// Blocks the preview whenever an inactive/interrupted capture could expose stale pixels.
     @Published var privacyCoverIsVisible = true

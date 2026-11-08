@@ -105,7 +105,7 @@ extension LiveStore {
 
     private func handleAudioSample(_ sample: AudioLevelSample, generation: Int) {
         guard liveIsActive, generation == lifecycleGeneration else { return }
-        audioSample = sample
+        if audioSample != sample { audioSample = sample }
     }
 
     internal func handleTransactionEvent(_ event: CaptureSessionController.CaptureTransactionEvent) {
@@ -211,7 +211,7 @@ extension LiveStore {
     }
 
     private func handleRecordingFailureEvent(_ event: CaptureSessionController.CaptureTransactionEvent) {
-        guard case let .recordingFailed(transaction, message) = event, let transaction else { return }
+        guard case let .recordingFailed(transaction, message) = event else { return }
         cancelWatchdog(.startAcknowledgement, for: transaction)
         cancelWatchdog(.finalization, for: transaction)
         cancelWatchdog(.metadataAttachment, for: transaction)
@@ -280,7 +280,6 @@ extension LiveStore {
         isRecording = false
         isStartingRecording = false
         isFinalizingRecording = false
-        lastRecordingURL = url
         capture.confirmPromotedRecording(for: transaction)
         completeRecordingTransaction(transaction, status: "Aufnahme gespeichert")
     }

@@ -18,10 +18,8 @@ public actor StudyPackageWriter {
 
     public func reconcileStartupArtifacts() {
         let fileManager = FileManager.default
-        for url in Self.startupArtifacts(fileManager: fileManager) {
-            if Self.shouldRemoveStartupArtifact(url) {
-                try? fileManager.removeItem(at: url)
-            }
+        for url in Self.startupArtifacts(fileManager: fileManager) where Self.shouldRemoveStartupArtifact(url) {
+            try? fileManager.removeItem(at: url)
         }
     }
 
@@ -205,10 +203,9 @@ public actor StudyPackageWriter {
             let root = try temporaryRoot(fileManager: fileManager)
             let candidates = try fileManager.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
                 .filter { Self.packageSessionID(from: $0) == sessionID }
-            for packageURL in await leases.unleasedPackages(in: candidates) {
-                if fileManager.fileExists(atPath: packageURL.path) {
-                    try fileManager.removeItem(at: packageURL)
-                }
+            for packageURL in await leases.unleasedPackages(in: candidates)
+                where fileManager.fileExists(atPath: packageURL.path) {
+                try fileManager.removeItem(at: packageURL)
             }
         } catch {
             // Best-effort cleanup; startup performs a complete recognized-artifact sweep.

@@ -43,7 +43,14 @@ actor MediaInspector {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         var hasher = SHA256()
-        while let chunk = try handle.read(upToCount: 1_048_576), !chunk.isEmpty { hasher.update(data: chunk) }
+        var hasMore = true
+        while hasMore {
+            hasMore = try autoreleasepool {
+                guard let chunk = try handle.read(upToCount: 1_048_576), !chunk.isEmpty else { return false }
+                hasher.update(data: chunk)
+                return true
+            }
+        }
         return SessionCoding.hex(hasher.finalize())
     }
 

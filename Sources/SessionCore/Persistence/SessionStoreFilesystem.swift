@@ -114,16 +114,7 @@ extension SessionStore {
 
     func validateMediaAsset(_ asset: SessionMediaAsset, sessionID: UUID) throws {
         let path = asset.relativePath
-        let pathIsSafe = [
-            !path.isEmpty,
-            !path.contains("/"),
-            !path.contains("\\"),
-            URL(fileURLWithPath: path).lastPathComponent == path,
-            URL(fileURLWithPath: path).pathExtension.lowercased() == "mp4"
-        ].allSatisfy({ $0 })
-        guard pathIsSafe else {
-            throw SessionStoreError.unsafeRecordingRelativePath
-        }
+        try validateRecordingRelativePath(path, expectedSessionID: nil)
         let expectedNameByRole: [MediaAssetRole: String] = [
             .ownRecorded: "\(sessionID.uuidString).mp4",
             .otherImported: "\(asset.id.uuidString).mp4"

@@ -176,8 +176,4 @@ extension LiveGuidanceView {
         if liveStore.isStartingRecording { return "starting" }
         return liveStore.isRecording ? "recording" : "idle"
     }
-
-    var evidenceSafeGuidancePane: some View {
-        liveGuidanceEvidencePane(maximumDimensions: 4, prioritizedDimensionID: "exposure")
-    }
 }

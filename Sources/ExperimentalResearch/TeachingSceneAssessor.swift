@@ -32,7 +32,6 @@ struct SceneInput {
 
     var effectiveBoard: Double { min(1, board + 0.08 * textDensity + 0.06 * secondaryBoard) }
     var hasBoard: Bool { effectiveBoard >= 0.40 }
-    var weakBoard: Bool { effectiveBoard >= 0.22 && effectiveBoard < 0.40 }
     var hasPeople: Bool { peopleN > 0 || peopleSignal >= 0.15 }
 }
 

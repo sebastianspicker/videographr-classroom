@@ -259,6 +259,7 @@ public struct CaptureSession: Codable, Equatable, Identifiable, Sendable {
            let recordingRelativePath
         {
             var values = SessionMediaAsset.Values()
+            values.id = id  // stable across decodes, so annotations keep pointing at this asset
             values.role = .ownRecorded
             values.relativePath = recordingRelativePath
             mediaAssets = [SessionMediaAsset(values)]

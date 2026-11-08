@@ -94,7 +94,9 @@ extension CaptureSessionController: AVCaptureVideoDataOutputSampleBufferDelegate
             )
         }
         guard status == noErr else { return nil }
-        return measuredAudioMetrics(from: reusableAudioBufferList.pointer, asbd: asbd, format: format)
+        return withExtendedLifetime(blockBuffer) {
+            measuredAudioMetrics(from: reusableAudioBufferList.pointer, asbd: asbd, format: format)
+        }
     }
 
     private func measuredAudioMetrics(

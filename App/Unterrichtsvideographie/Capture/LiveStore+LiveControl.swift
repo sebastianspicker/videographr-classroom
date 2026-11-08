@@ -33,6 +33,9 @@ extension LiveStore {
             rejectSimulatorRecordingAttempt()
             return
         }
+        guard !isPreparingRecording else { return }
+        isPreparingRecording = true
+        defer { isPreparingRecording = false }
         let preparation = AppStore.RecordingPreparation(
             transactionID: UUID(),
             readiness: readiness,
@@ -115,7 +118,6 @@ extension LiveStore {
             isRecording = false
             isFinalizingRecording = false
         }
-        lastRecordingURL = nil
         recordStatusMessage = nil
         invalidateDirectVisualSample()
         experimentalResult = nil

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Reproducible local Gaussian smoke checks; synthetic artifacts only, no downloads.
 
 This checks actual package geometry, AVFoundation/Core ML generation and the
@@ -24,7 +23,7 @@ FLAGS = ["-target", f"{platform.machine()}-apple-macos14.0",
 
 
 def run(arguments: list[str], *, allowed: tuple[int, ...] = (0,), capture: bool = False) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(arguments, cwd=ROOT, text=True, capture_output=capture, timeout=240)
+    result = subprocess.run(arguments, check=False, cwd=ROOT, text=True, capture_output=capture, timeout=240)
     if result.returncode not in allowed:
         if capture:
             print(result.stdout, end="")
@@ -119,6 +118,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except (subprocess.CalledProcessError, RuntimeError, ValueError) as error:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, RuntimeError, ValueError) as error:
         print(f"Gaussian checks FAILED: {error}")
         raise SystemExit(1)

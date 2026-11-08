@@ -12,7 +12,10 @@ extension GuidanceEngine {
         placement: PlacementAssessment,
         observability: CaptureObservabilityAssessment
     ) -> GuidanceResult {
-        let directTips = observability.dimensions.compactMap(observabilityTip)
+        // A dimension tip only adds news when no tip of its category already says it as strongly.
+        let directTips = observability.dimensions.compactMap(observabilityTip).filter { direct in
+            !tips.contains { $0.category == direct.category && $0.severity >= direct.severity }
+        }
         var values = GuidanceResult.Values(tips: tips + directTips, placement: placement)
         values.observability = observability
         return GuidanceResult(values)

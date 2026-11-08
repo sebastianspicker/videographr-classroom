@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Fail closed when the candidate GitHub surface contains private or stale artifacts."""
 
 from __future__ import annotations
@@ -12,9 +11,13 @@ from urllib.parse import unquote
 # Keep the hygiene check from leaving bytecode caches in the scanned tree.
 sys.dont_write_bytecode = True
 
-from public_hygiene_support import (  # noqa: E402
+from public_hygiene_support import (
     hidden_public_source_issues as _hidden_public_source_issues,
+)
+from public_hygiene_support import (
     release_text_issues as _release_text_issues,
+)
+from public_hygiene_support import (
     release_version_issues as _release_version_issues,
 )
 
@@ -147,7 +150,8 @@ def local_link_issue(path: Path, target: str) -> str | None:
 
 
 def _local_link_target(target: str) -> str | None:
-    target = target.strip().split(maxsplit=1)[0].strip("<>")
+    parts = target.strip().split(maxsplit=1)
+    target = parts[0].strip("<>") if parts else ""
     if not target or target.startswith(("#", "http://", "https://", "mailto:")):
         return None
     return unquote(target.split("#", 1)[0]) or None

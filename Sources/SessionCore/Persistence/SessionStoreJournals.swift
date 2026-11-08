@@ -31,31 +31,34 @@ extension SessionStore {
         inline: [CaptureObservation],
         sessionID: UUID
     ) throws -> [CaptureObservation] {
-        // Journal values win for a duplicate ID because they are the durable append path.
-        var observations = Dictionary(uniqueKeysWithValues: inline.map { ($0.id, $0) })
-        for observation in try readObservationJournal(sessionID: sessionID) {
-            observations[observation.id] = observation
-        }
-        return observations.values.sorted {
-            $0.observedAt == $1.observedAt
-                ? $0.id.uuidString < $1.id.uuidString
-                : $0.observedAt < $1.observedAt
-        }
+        try Self.mergedByID(inline + readObservationJournal(sessionID: sessionID), id: \.id, date: \.observedAt)
     }
 
     func mergedCodingSnapshots(
         inline: [ResearchCodingSnapshot],
         sessionID: UUID
     ) throws -> [ResearchCodingSnapshot] {
-        var snapshots = Dictionary(uniqueKeysWithValues: inline.map { ($0.id, $0) })
-        for snapshot in try readCodingSnapshotJournal(sessionID: sessionID) {
-            snapshots[snapshot.id] = snapshot
+        try Self.mergedByID(inline + readCodingSnapshotJournal(sessionID: sessionID), id: \.id, date: \.createdAt)
+    }
+
+    /// Later entries replace earlier ones with the same ID (journal values win: they are the durable
+    /// append path). Stored dates have whole-second precision, so equal dates keep file order.
+    private static func mergedByID<Entry>(
+        _ entries: [Entry], id: (Entry) -> UUID, date: (Entry) -> Date
+    ) -> [Entry] {
+        var positions: [UUID: Int] = [:]
+        var merged: [Entry] = []
+        for entry in entries {
+            if let position = positions[id(entry)] {
+                merged[position] = entry
+            } else {
+                positions[id(entry)] = merged.count
+                merged.append(entry)
+            }
         }
-        return snapshots.values.sorted {
-            $0.createdAt == $1.createdAt
-                ? $0.id.uuidString < $1.id.uuidString
-                : $0.createdAt < $1.createdAt
-        }
+        return merged.enumerated().sorted {
+            date($0.element) == date($1.element) ? $0.offset < $1.offset : date($0.element) < date($1.element)
+        }.map(\.element)
     }
 
     func appendObservationsToJournal(
@@ -180,10 +183,20 @@ extension SessionStore {
     ) throws {
         let journalEncoder = SessionCoding.journalLineEncoder()
         try createJournalIfNeeded(at: url)
-        let handle = try FileHandle(forWritingTo: url)
+        let handle = try FileHandle(forUpdating: url)
         defer { try? handle.close() }
-        try handle.seekToEnd()
         var resultingSize = try regularFileSize(at: url)
+        if resultingSize > 0 {
+            try handle.seek(toOffset: UInt64(resultingSize - 1))
+            if try handle.read(upToCount: 1) != Data([0x0A]) {
+                // An interrupted write left a torn last line; drop it so the next line stays decodable.
+                let data = try validJournalData(at: url, invalidError: invalidError)
+                let kept = data.lastIndex(of: 0x0A).map { $0 - data.startIndex + 1 } ?? 0
+                try handle.truncate(atOffset: UInt64(kept))
+                resultingSize = Int64(kept)
+            }
+        }
+        try handle.seekToEnd()
         for entry in entries {
             let context = JournalAppendContext(encoder: journalEncoder, handle: handle, invalidError: invalidError)
             resultingSize = try appendJournalEntry(entry, context: context, currentSize: resultingSize)

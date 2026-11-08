@@ -1,13 +1,11 @@
-#!/usr/bin/env python3
 """Validate the package boundaries that keep experimental research opt-in."""
 
 from __future__ import annotations
 
-from pathlib import Path
 import re
 import sys
 import xml.etree.ElementTree as XML
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = ROOT / "Package.swift"

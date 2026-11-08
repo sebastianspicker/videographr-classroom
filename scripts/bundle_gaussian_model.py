@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Xcode resource phase: optionally bundle a verified model, with no network access."""
 
 from __future__ import annotations

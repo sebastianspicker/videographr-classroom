@@ -207,7 +207,8 @@ extension LiveGuidanceView {
             .buttonStyle(RecordButtonStyle(isRecording: false, compact: true))
             .accessibilityIdentifier("live.start")
             .disabled(
-                liveStore.isStartingRecording || liveStore.isRecording || liveStore.isFinalizingRecording
+                liveStore.isStartingRecording || liveStore.isPreparingRecording || liveStore.isRecording
+                    || liveStore.isFinalizingRecording
                     || audioCheck.blocksCapture
                     || !readiness.canOverrideQualityWarnings || !overrideIsValid
             )

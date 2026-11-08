@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Print the configured or deterministic available iPhone simulator identifier."""
 
 from __future__ import annotations

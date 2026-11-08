@@ -219,7 +219,7 @@ extension LiveGuidanceView {
                 Text(recordActionTitle)
             }
             .buttonStyle(RecordButtonStyle(isRecording: liveStore.isRecording))
-            .disabled(liveStore.isStartingRecording || liveStore.isFinalizingRecording
+            .disabled(liveStore.isStartingRecording || liveStore.isPreparingRecording || liveStore.isFinalizingRecording
                 || (!liveStore.isRecording && (audioCheck.blocksCapture || !readiness.canOverrideQualityWarnings || !overrideIsValid)))
             .accessibilityIdentifier("live.captureDock")
             .accessibilityLabel(liveStore.isRecording ? "Aufnahme stoppen" : "Aufnahme starten")

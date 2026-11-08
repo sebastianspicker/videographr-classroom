@@ -37,8 +37,6 @@ enum Ink {
     static let attention = dynamic(light: 0x9A4A00, dark: 0xFFB070)
     /// Errors and destructive actions on paper.
     static let fault = dynamic(light: 0xB3261E, dark: 0xFF8A80)
-    /// A running take. Never used for anything else.
-    static let signal = dynamic(light: 0xC8102E, dark: 0xFF5A5F)
 
     /// Wash behind the human hand, e.g. the selected prompt.
     static let humanWash = dynamic(light: 0xE6EAF6, dark: 0x22283A)
@@ -92,7 +90,6 @@ enum Typeface {
     /// Human writing and long-form reading.
     static let prose = Font.custom(text, size: 17, relativeTo: .body)
     static let proseSmall = Font.custom(text, size: 15, relativeTo: .subheadline)
-    static let proseItalic = Font.custom(italic, size: 17, relativeTo: .body)
     static let quote = Font.custom(italic, size: 15, relativeTo: .subheadline)
     /// Wordmark: always lowercase.
     static let wordmark = Font.custom(display, size: 21, relativeTo: .title3)
@@ -141,11 +138,6 @@ enum Space {
 enum Radius {
     /// Controls are near-square, like a stamp, not a pill.
     static let control: CGFloat = 3
-}
-
-enum Motion {
-    static let quick = Animation.easeOut(duration: 0.18)
-    static let settle = Animation.easeInOut(duration: 0.24)
 }
 
 // MARK: - Helpers

@@ -70,12 +70,12 @@ extension ReflectView {
     }
 
     func useWholeVideoForAnnotationInterval() {
-        guard let duration = selectedAsset?.durationMilliseconds else {
+        guard selectedAsset?.durationMilliseconds != nil else {
             annotationEditorMessage = "Die Videodauer wird noch geprüft. Bitte warten Sie, bevor Sie einen Zeitbereich sichern."
             return
         }
         annotationStartTimecode = timecode(0)
-        annotationEndTimecode = timecode(duration)
+        annotationEndTimecode = timecode(0)
         annotationEditorMessage = nil
     }
 

@@ -1,0 +1,6 @@
+# Labelled tuples are this codebase's convention for grouped initializer arguments,
+# e.g. GuidanceTip((id:, category:, severity:, message:, actionHint:)).
+# Lizard already reports long functions, so SwiftLint's copy of that check is off.
+disabled_rules:
+  - large_tuple
+  - function_body_length

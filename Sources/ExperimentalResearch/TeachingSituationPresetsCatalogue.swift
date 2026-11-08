@@ -243,7 +243,4 @@ public enum TeachingSituationCatalogue {
         guard let id = TeachingSituationID(rawValue: raw) else { return nil }
         return preset(for: id)
     }
-
-    /// Minimum rich catalogue size (acceptance bar).
-    public static let richMinimumCount = 12
 }

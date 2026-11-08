@@ -14,7 +14,6 @@ public struct TeachingSceneWindow: Equatable, Sendable {
     }
 
     public mutating func push(_ assessment: TeachingSceneAssessment) {
-        // Do not smooth over hard unusable failures when confidence is zero (CV fail path).
         samples.append(assessment)
         if samples.count > capacity {
             samples.removeFirst(samples.count - capacity)
@@ -174,10 +173,9 @@ public struct TeachingSceneWindow: Equatable, Sendable {
         }
         return "Zeitfenster (\(input.sampleCount)): Szene „\(input.scene.titleDE)“ · Match \(percentText(input.match)) - Preset noch nicht stabil erfüllt."
     }
-
-    /// Most frequent value, with the latest occurrence resolving an equal vote count.
 }
 
+/// Most frequent value, with the latest occurrence resolving an equal vote count.
 func mostRecentFrequentValue<Values: BidirectionalCollection>(
     in values: Values,
     counts: [Values.Element: Int]
