@@ -1,6 +1,5 @@
 import Foundation
 
-
 // MARK: - Pure fusion helpers for experimental rule inputs
 
 /// Fuses luminance-heuristic board score with multi-cue CV board detection for guidance.

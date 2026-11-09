@@ -18,8 +18,7 @@ extension LiveStore {
         privacyCoverIsVisible = true
         if nsError?.code == AVError.mediaServicesWereReset.rawValue,
            viewWantsLive, appIsActive, !captureIsInterrupted,
-           runtimeRecoveryAttempts < maximumRuntimeRecoveryAttempts
-        {
+           runtimeRecoveryAttempts < maximumRuntimeRecoveryAttempts {
             runtimeRecoveryAttempts += 1
             recordStatusMessage = "Kameradienst wurde zurückgesetzt - Wiederherstellung läuft."
             suspend()

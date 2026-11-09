@@ -159,4 +159,3 @@ public struct CaptureObservabilityAssessment: Equatable, Sendable {
         return value >= warnMinimum ? .warn : .fail
     }
 }
-

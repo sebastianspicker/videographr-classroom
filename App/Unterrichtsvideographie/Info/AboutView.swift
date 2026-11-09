@@ -72,7 +72,7 @@ struct AboutView: View {
                 stepList([
                     "Setup mit zweckgebundener Einwilligung",
                     "technische Aufnahmehinweise zu Horizont, Kameraruhe, Belichtung, sichtbaren Bildstrukturen und Audiopegel",
-                    "Reflexion mit selbst gesetzten Zeitmarken",
+                    "Reflexion mit selbst gesetzten Zeitmarken"
                 ])
                 caption("Bildstruktur-Signale beschreiben nur Beobachtbarkeit. Sie erkennen weder Unterrichtsqualität noch Lernen, Aufmerksamkeit, Feedback oder Beteiligung.")
             }
@@ -97,7 +97,7 @@ struct AboutView: View {
                     "CoreMotion und AVCapture",
                     "lokale Signalextraktion",
                     "technische Aufnahmehinweise",
-                    "lokaler SessionStore",
+                    "lokaler SessionStore"
                 ])
                 Text("Video, Metadaten und Reflexion bleiben ohne ausdrückliche Freigabe im App-Speicher.")
                     .font(Typeface.prose)
@@ -131,7 +131,7 @@ struct AboutView: View {
                     "docs/SCIENTIFIC_ALPHA.md",
                     "docs/RESEARCH_GAP_INVENTORY.md",
                     "docs/EVALUATION.md",
-                    "docs/references/unterrichtsvideographie.md",
+                    "docs/references/unterrichtsvideographie.md"
                 ], id: \.self) { path in
                     Text(path)
                         .font(Typeface.valueSmall)
@@ -157,7 +157,7 @@ struct AboutView: View {
                     "Medienwiedergabe",
                     "Zeitmarken",
                     "strukturierte Reflexion",
-                    "vorab protokollierter Metadatenexport",
+                    "vorab protokollierter Metadatenexport"
                 ])
                 bulletList("Nicht enthalten", [
                     "Multi-Cam-Synchronisation",
@@ -166,7 +166,7 @@ struct AboutView: View {
                     "institutionelle Datenschutzfreigabe",
                     "automatische pädagogische Bewertung",
                     "psychometrische Validierung",
-                    "Wirksamkeitsnachweis",
+                    "Wirksamkeitsnachweis"
                 ])
             }
         }

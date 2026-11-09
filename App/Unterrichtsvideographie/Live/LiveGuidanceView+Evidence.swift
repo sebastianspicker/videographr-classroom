@@ -10,8 +10,7 @@ extension LiveGuidanceView {
     ) -> some View {
         var orderedDimensions = liveStore.guidance.observability.dimensions
         if let prioritizedDimensionID,
-           let index = orderedDimensions.firstIndex(where: { $0.id == prioritizedDimensionID })
-        {
+           let index = orderedDimensions.firstIndex(where: { $0.id == prioritizedDimensionID }) {
             orderedDimensions.insert(orderedDimensions.remove(at: index), at: 0)
         }
         let dimensions = maximumDimensions.map {
@@ -20,8 +19,7 @@ extension LiveGuidanceView {
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
             if appStore.session.operatingMode == .experimentalResearch,
-               appStore.session.hasUsableExperimentalProtocol
-            {
+               appStore.session.hasUsableExperimentalProtocol {
                 HypothesisBlock(title: "Experimenteller Forschungsmodus · nicht validiert") {
                     Text("Regelhypothesen sind von Aufnahmesignalen getrennt und beeinflussen weder Bereitschaft noch Reflexionsfragen.")
                         .font(Typeface.caption)
@@ -237,8 +235,7 @@ extension LiveGuidanceView {
         }
         if liveStore.authorizationStatus == .denied || liveStore.authorizationStatus == .restricted
             || liveStore.microphoneAuthorizationStatus == .denied
-            || liveStore.microphoneAuthorizationStatus == .restricted
-        {
+            || liveStore.microphoneAuthorizationStatus == .restricted {
             Button("Berechtigungen in Einstellungen öffnen") {
                 guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
                 UIApplication.shared.open(url)
@@ -352,8 +349,7 @@ extension LiveGuidanceView {
     @ViewBuilder
     private var experimentalHypotheses: some View {
         if appStore.session.operatingMode == .experimentalResearch,
-           appStore.session.hasUsableExperimentalProtocol
-        {
+           appStore.session.hasUsableExperimentalProtocol {
             instrumentSection("Experimentelle Regelhypothesen") {
                 HypothesisBlock {
                     Text(liveStore.experimentalResult?.hypotheses.limitationDE ?? "Experimentelle Regeln werden erst nach einem aktuellen Aufnahmesignal ausgewertet.")

@@ -112,7 +112,7 @@ struct LiveGuidanceView: View {
                     audioCheck.cancelForInactivity()
                 }
             }
-            .onChange(of: appStore.session.id) { _, newValue in
+            .onChange(of: appStore.session.id) { _, _ in
                 forceRecord = false
                 overrideReason = ""
                 audioCheck.cancel(resumeCapture: false)

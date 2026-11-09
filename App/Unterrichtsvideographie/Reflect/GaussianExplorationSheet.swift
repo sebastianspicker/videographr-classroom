@@ -114,7 +114,7 @@ struct GaussianExplorationSheet: View {
         "Welcher Bereich fehlt oder ist verdeckt? Wo zeigt die Perspektive Schraffur?",
         "Was hat sich durch den Blickwechsel nur in der Darstellung verändert? Die aufgenommenen Ereignisse bleiben dieselben.",
         "Was bleibt unsicher? Welche zusätzliche Quelle (Kameraposition, Beobachtung, Gespräch) bräuchten Sie?",
-        "Welche Position oder Beobachtungsroutine könnte in einer künftigen Stunde helfen?",
+        "Welche Position oder Beobachtungsroutine könnte in einer künftigen Stunde helfen?"
     ]
 
     private var isAuthorized: Bool {
@@ -430,7 +430,7 @@ private struct GaussianPositionMap: View {
             part(camera.vertical, GaussianCamera.lateralLimit, "tiefer", "höher"),
             part(camera.dolly, GaussianCamera.dollyLimit, "weiter", "näher"),
             angle(camera.yawDegrees, "links", "rechts"),
-            angle(camera.pitchDegrees, "tiefer", "höher"),
+            angle(camera.pitchDegrees, "tiefer", "höher")
         ].compactMap { $0 }
         return "Ansicht " + parts.joined(separator: ", ")
     }

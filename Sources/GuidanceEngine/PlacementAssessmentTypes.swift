@@ -28,4 +28,3 @@ public struct PlacementDimension: Equatable, Identifiable, Sendable {
         self.detailDE = detailDE
     }
 }
-

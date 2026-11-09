@@ -256,8 +256,7 @@ public struct CaptureSession: Codable, Equatable, Identifiable, Sendable {
         // Decoding remains non-mutating; legacy media is synthesized in memory and persisted by the next save.
         if decodedVersion < SessionSchema.currentVersion,
            mediaAssets.isEmpty,
-           let recordingRelativePath
-        {
+           let recordingRelativePath {
             var values = SessionMediaAsset.Values()
             values.id = id  // stable across decodes, so annotations keep pointing at this asset
             values.role = .ownRecorded

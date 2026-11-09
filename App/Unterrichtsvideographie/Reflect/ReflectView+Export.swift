@@ -114,7 +114,7 @@ extension ReflectView {
         ("annotations.jsonl", "Menschliche Notizen und Zeitbereiche"),
         ("observations.jsonl", "Technische Beobachtungen"),
         ("coding-snapshots.jsonl", "Kodierungsschnappschüsse und Herkunft"),
-        ("manifest.json", "Prüfsummen und Herkunft"),
+        ("manifest.json", "Prüfsummen und Herkunft")
     ]
 
     private var exportContents: some View {

@@ -53,8 +53,7 @@ extension SpokenAudioCheckModel {
         ) else { return }
         for candidate in candidates
             where candidate.lastPathComponent.hasPrefix("Videographr-SpokenCheck-")
-                && candidate.pathExtension == "m4a"
-        {
+                && candidate.pathExtension == "m4a" {
             guard let values = try? candidate.resourceValues(
                 forKeys: [.isRegularFileKey, .isSymbolicLinkKey]
             ), values.isRegularFile == true, values.isSymbolicLink != true

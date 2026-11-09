@@ -12,14 +12,11 @@ extension SessionStore {
         } catch {
             let error = error as NSError
             if error.domain == NSCocoaErrorDomain,
-               (error.code == CocoaError.fileNoSuchFile.rawValue
-                || error.code == CocoaError.fileReadNoSuchFile.rawValue)
-            {
+               [CocoaError.fileNoSuchFile.rawValue, CocoaError.fileReadNoSuchFile.rawValue].contains(error.code) {
                 return nil
             }
             if error.domain == NSPOSIXErrorDomain,
-               error.code == Int(POSIXErrorCode.ENOENT.rawValue)
-            {
+               error.code == Int(POSIXErrorCode.ENOENT.rawValue) {
                 return nil
             }
             throw error

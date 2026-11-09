@@ -308,8 +308,7 @@ struct ReflectView: View {
 
             if appStore.session.operatingMode == .experimentalResearch,
                appStore.session.hasUsableExperimentalProtocol,
-               appStore.session.latestCodingSnapshot != nil
-            {
+               appStore.session.latestCodingSnapshot != nil {
                 Rule()
                 DisclosureGroup("Experimentelle Hilfen · nicht validiert") {
                     experimentalHypotheses

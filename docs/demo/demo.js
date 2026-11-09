@@ -232,6 +232,27 @@
     }));
   }
 
+  const actions = new Map([
+    ["goto-live", () => setView("live")],
+    ["record", toggleRecording],
+    ["speech", startSpeech],
+    ["save-consent", () => showToast("Einwilligungsstand nur simuliert. Es wurde nichts gespeichert.")],
+    ["show-document", () => showToast("Dokumentversion ist nur eine simulierte native Aktion.")],
+    ["import", () => showToast("Dateizugriff ist deaktiviert. Es wurde keine MP4 ausgewählt.")],
+    ["save-note", () => showToast("Notiz nur simuliert gespeichert. Die Demo persistiert nichts.")],
+    ["marker", () => {
+      const candidates = ["16:08", "31:26", "39:54"];
+      const marker = candidates[state.markers.length - data.reflection.markers.length] || "44:12";
+      state.markers.push(marker); renderMarkers(); showToast(`Zeitmarke ${marker} nur simuliert hinzugefügt.`);
+    }],
+    ["export", () => showToast(isExportEligible() ? "Paket wäre in der Demo freigegeben. Es wurde keine .videographrstudy-Datei erzeugt." : "Paket bleibt simuliert gesperrt, bis beide erforderlichen Scopes aktiv sind.")],
+    ["back-catalogue", () => {
+      document.querySelector("#reader").hidden = true;
+      document.querySelector("#catalogue-list").hidden = false;
+      document.querySelector("[data-topic]")?.focus();
+    }]
+  ]);
+
   document.addEventListener("click", (event) => {
     const scope = event.target.closest("[data-scope]");
     if (scope) {
@@ -245,25 +266,7 @@
     const topic = event.target.closest("[data-topic]");
     if (topic) { openTopic(topic.dataset.topic); return; }
     const action = event.target.closest("[data-action]")?.dataset.action;
-    if (!action) return;
-    if (action === "goto-live") setView("live");
-    if (action === "record") toggleRecording();
-    if (action === "speech") startSpeech();
-    if (action === "save-consent") showToast("Einwilligungsstand nur simuliert. Es wurde nichts gespeichert.");
-    if (action === "show-document") showToast("Dokumentversion ist nur eine simulierte native Aktion.");
-    if (action === "import") showToast("Dateizugriff ist deaktiviert. Es wurde keine MP4 ausgewählt.");
-    if (action === "save-note") showToast("Notiz nur simuliert gespeichert. Die Demo persistiert nichts.");
-    if (action === "marker") {
-      const candidates = ["16:08", "31:26", "39:54"];
-      const marker = candidates[state.markers.length - data.reflection.markers.length] || "44:12";
-      state.markers.push(marker); renderMarkers(); showToast(`Zeitmarke ${marker} nur simuliert hinzugefügt.`);
-    }
-    if (action === "export") showToast(isExportEligible() ? "Paket wäre in der Demo freigegeben. Es wurde keine .videographrstudy-Datei erzeugt." : "Paket bleibt simuliert gesperrt, bis beide erforderlichen Scopes aktiv sind.");
-    if (action === "back-catalogue") {
-      document.querySelector("#reader").hidden = true;
-      document.querySelector("#catalogue-list").hidden = false;
-      document.querySelector("[data-topic]")?.focus();
-    }
+    actions.get(action)?.();
   });
 
   document.querySelector("#session-name").addEventListener("input", renderReadiness);

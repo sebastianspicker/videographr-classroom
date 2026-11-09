@@ -51,8 +51,7 @@ public enum StudyPackageContract: Sendable {
     ) -> [String] {
         var failures: [String] = []
         if manifest.contentFiles != expectedContentFiles
-            || Set(manifest.contentFiles).count != manifest.contentFiles.count
-        {
+            || Set(manifest.contentFiles).count != manifest.contentFiles.count {
             failures.append("unexpected-content-files")
         }
         if Set(manifest.fileDigests.keys) != Set(expectedContentFiles) {
@@ -86,8 +85,7 @@ public enum StudyPackageContract: Sendable {
     private static func provenanceFailures(_ manifest: StudyExportManifest) -> [String] {
         var failures: [String] = []
         if manifest.provenance.algorithmVersion?.isEmpty != false
-            || manifest.provenance.evidenceRegistryVersion?.isEmpty != false
-        {
+            || manifest.provenance.evidenceRegistryVersion?.isEmpty != false {
             failures.append("incomplete-generator-provenance")
         }
         return failures

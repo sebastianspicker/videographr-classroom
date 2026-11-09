@@ -150,10 +150,9 @@ def scheme_has_app_test_reference() -> bool:
     )
 
 
-def main() -> int:
+def package_errors() -> list[str]:
     errors: list[str] = []
     manifest = PACKAGE.read_text(encoding="utf-8")
-
     for target, expected in EXPECTED_TARGET_DEPENDENCIES.items():
         actual = target_dependencies(manifest, target)
         if actual is None:
@@ -164,7 +163,11 @@ def main() -> int:
     root_session_files = sorted(path.name for path in SESSION_CORE.glob("*.swift"))
     if root_session_files:
         errors.append("SessionCore source files must live in Domain/, Application/, or Persistence/: " + ", ".join(root_session_files))
+    return errors
 
+
+def module_boundary_errors() -> list[str]:
+    errors: list[str] = []
     for boundary in (GUIDANCE, SESSION_CORE):
         for source in swift_files(boundary):
             if EXPERIMENTAL_IMPORT.search(source.read_text(encoding="utf-8")):
@@ -180,7 +183,11 @@ def main() -> int:
     for source in swift_files(experimental):
         if GUIDANCE_ENGINE_EXTENSION.search(source.read_text(encoding="utf-8")):
             errors.append(f"ExperimentalResearch must not extend GuidanceEngine: {source.relative_to(ROOT)}")
+    return errors
 
+
+def persistence_boundary_errors() -> list[str]:
+    errors: list[str] = []
     for source in swift_files(SESSION_CORE / "Domain"):
         code = STRING_LITERAL_OR_LINE_COMMENT.sub("", source.read_text(encoding="utf-8"))
         if DOMAIN_FILE_IO.search(code):
@@ -194,16 +201,23 @@ def main() -> int:
         code = STRING_LITERAL_OR_LINE_COMMENT.sub("", source.read_text(encoding="utf-8"))
         if PERSISTENCE_REFERENCE.search(code):
             errors.append(f"app views and capture must reach persistence only through AppStore: {source.relative_to(ROOT)}")
+    return errors
 
+
+def app_project_errors() -> list[str]:
     project = APP_PROJECT.read_text(encoding="utf-8")
-    errors.extend(app_project_membership_errors(project))
+    errors = app_project_membership_errors(project)
     if not app_links_experimental_research(project):
         errors.append("the iOS app project does not link the ExperimentalResearch package product")
     if not project_has_app_test_target(project):
         errors.append(f"the iOS app project does not define the {APP_TEST_TARGET} unit-test target")
     if not scheme_has_app_test_reference():
         errors.append(f"the shared app scheme does not test {APP_TEST_TARGET}")
+    return errors
 
+
+def main() -> int:
+    errors = [*package_errors(), *module_boundary_errors(), *persistence_boundary_errors(), *app_project_errors()]
     if errors:
         print("Architecture validation failed:", file=sys.stderr)
         for error in errors:
@@ -212,7 +226,6 @@ def main() -> int:
 
     print("Architecture validation passed.")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

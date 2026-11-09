@@ -1,6 +1,11 @@
 # Labelled tuples are this codebase's convention for grouped initializer arguments,
 # e.g. GuidanceTip((id:, category:, severity:, message:, actionHint:)).
 # Lizard already reports long functions, so SwiftLint's copy of that check is off.
+# With this file present Codacy runs SwiftLint's defaults instead of its coding standard;
+# line_length and identifier_name were not in that standard (x/y/cv are the geometry and
+# computer-vision names used throughout), so they stay off here too.
 disabled_rules:
   - large_tuple
   - function_body_length
+  - line_length
+  - identifier_name

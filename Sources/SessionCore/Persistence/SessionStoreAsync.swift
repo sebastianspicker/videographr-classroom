@@ -163,8 +163,7 @@ public actor SessionStoreAsync {
                 at: closedAt
             ) > 0
             for index in candidate.exportEvents.indices
-                where candidate.exportEvents[index].status == .attempted
-            {
+                where candidate.exportEvents[index].status == .attempted {
                 candidate.exportEvents[index].finish(
                     status: .outcomeUnknown,
                     shareActivityIdentifier: "unknown-after-relaunch",

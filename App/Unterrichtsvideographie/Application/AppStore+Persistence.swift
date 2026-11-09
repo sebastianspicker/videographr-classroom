@@ -10,8 +10,7 @@ extension AppStore {
         let generation = activeSessionGeneration
         autosaveTask = Task { [weak self] in
             if delayNanoseconds > 0 {
-                do { try await Task.sleep(nanoseconds: delayNanoseconds) }
-                catch { return }
+                do { try await Task.sleep(nanoseconds: delayNanoseconds) } catch { return }
             }
             guard !Task.isCancelled else { return }
             guard let self else { return }
@@ -252,8 +251,7 @@ extension AppStore {
                 await self.reloadListAsync()
                 if self.session.id == id {
                     if let nextID = self.allSessions.first?.id,
-                       let loaded = try await self.asyncStore.load(id: nextID)
-                    {
+                       let loaded = try await self.asyncStore.load(id: nextID) {
                         self.replaceSession(loaded)
                     } else {
                         self.replaceSession(Self.makeSession(buildProvenance: BuildProvenanceFactory.capture(for: .evidenceSafe)))

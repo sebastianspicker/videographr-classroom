@@ -424,8 +424,7 @@ extension ReflectView {
     var experimentalHypotheses: some View {
         if appStore.session.operatingMode == .experimentalResearch,
            appStore.session.hasUsableExperimentalProtocol,
-           let snapshot = appStore.session.latestCodingSnapshot
-        {
+           let snapshot = appStore.session.latestCodingSnapshot {
             HypothesisBlock(title: "Experimentelle Hypothese · nicht validiert") {
                 Text(snapshot.summaryDE)
                     .font(Typeface.caption)

@@ -82,5 +82,4 @@ public struct PlacementAssessment: Equatable, Sendable {
         PlacementDimension(id: id, labelDE: label, ok: ok, detailDE: detail)
     }
 
-
 }

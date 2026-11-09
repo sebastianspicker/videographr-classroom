@@ -25,7 +25,7 @@ struct CameraPreviewView: UIViewRepresentable {
 
     /// UIView whose backing layer is always a video preview layer.
     final class PreviewView: UIView {
-        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+        override static var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
         var videoPreviewLayer: AVCaptureVideoPreviewLayer? {
             layer as? AVCaptureVideoPreviewLayer
         }
